@@ -11,12 +11,7 @@ class CreateFoodPage extends StatefulWidget {
   /// When set, the page edits this food (PATCH) instead of creating a new one.
   final CustomFood? existing;
 
-  /// When set (and [existing] is not), prefills the form from this food but
-  /// still creates a brand new food — used to copy a barcode-scanned item
-  /// into an editable one.
-  final CustomFood? initial;
-
-  const CreateFoodPage({super.key, this.existing, this.initial});
+  const CreateFoodPage({super.key, this.existing});
 
   @override
   State<CreateFoodPage> createState() => _CreateFoodPageState();
@@ -46,12 +41,8 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
       if (!mounted) return;
       setState(() => _targets = t);
     });
-    final existing = widget.existing;
-    final prefill = existing ?? widget.initial;
-    final isCopy = existing == null && widget.initial != null;
-    _nameController = TextEditingController(
-      text: isCopy ? '${prefill!.name} (copy)' : (prefill?.name ?? ''),
-    );
+    final prefill = widget.existing;
+    _nameController = TextEditingController(text: prefill?.name ?? '');
     _portionController = TextEditingController(text: (prefill?.portionGrams ?? 100).round().toString());
     _proteinController = TextEditingController(text: prefill != null ? _fmt(prefill.proteinG) : '');
     _carbsController = TextEditingController(text: prefill != null ? _fmt(prefill.carbsG) : '');

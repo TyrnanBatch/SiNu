@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'custom_foods_store.dart';
+import 'models.dart';
 import 'openfoodfacts_client.dart';
 import 'theme.dart';
 
@@ -40,6 +41,22 @@ class _BarcodeScanPageState extends State<BarcodeScanPage> {
 
     try {
       final product = await _off.fetchProduct(code);
+      final existing = await _store.findByBarcode(code);
+
+      if (existing != null) {
+        if (!mounted) return;
+        final food = await _resolveDuplicate(existing, product, code);
+        if (!mounted) return;
+        if (food == null) {
+          // User cancelled — resume scanning instead of leaving the page.
+          setState(() => _handling = false);
+          await _controller.start();
+          return;
+        }
+        Navigator.pop(context, food);
+        return;
+      }
+
       final food = await _store.create(
         name: product.name,
         source: 'scanned',
@@ -48,6 +65,7 @@ class _BarcodeScanPageState extends State<BarcodeScanPage> {
         carbsG: product.carbsG,
         fatG: product.fatG,
         kcal: product.kcal,
+        barcode: code,
       );
       if (!mounted) return;
       Navigator.pop(context, food);
@@ -58,6 +76,52 @@ class _BarcodeScanPageState extends State<BarcodeScanPage> {
     } catch (e) {
       _showError('Could not look up barcode — check your connection.');
     }
+  }
+
+  /// This barcode's already in the library. Ask whether to keep using that
+  /// entry (as it currently stands, edits included) or reset it back to
+  /// what was just scanned. Returns null if the user cancels.
+  Future<CustomFood?> _resolveDuplicate(
+    CustomFood existing,
+    ProductLookupResult product,
+    String code,
+  ) async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Already scanned'),
+        content: Text(
+          '"${existing.name}" is already in your Custom Foods, from a previous scan of this barcode. '
+          'Use the existing entry as it is now, or reset it back to the freshly scanned data?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'existing'),
+            child: const Text('Use Existing'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'reset'),
+            child: const Text('Reset to Scanned Data'),
+          ),
+        ],
+      ),
+    );
+
+    if (choice == 'existing') return existing;
+    if (choice == 'reset') {
+      return _store.update(
+        existing.id,
+        name: product.name,
+        portionGrams: product.portionGrams,
+        proteinG: product.proteinG,
+        carbsG: product.carbsG,
+        fatG: product.fatG,
+        kcal: product.kcal,
+        barcode: code,
+      );
+    }
+    return null;
   }
 
   void _showError(String message) {

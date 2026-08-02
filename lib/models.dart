@@ -15,6 +15,11 @@ class CustomFood {
   /// the create/edit food page.
   final Map<String, double> nutrients;
 
+  /// The barcode this food was scanned from, if [source] is 'scanned'. Lets
+  /// re-scanning the same product detect it already exists, even after the
+  /// food's values have since been edited.
+  final String? barcode;
+
   const CustomFood({
     required this.id,
     required this.name,
@@ -26,6 +31,7 @@ class CustomFood {
     required this.kcal,
     required this.isFavorite,
     this.nutrients = const {},
+    this.barcode,
   });
 
   Map<String, dynamic> toJson() => {
@@ -39,6 +45,7 @@ class CustomFood {
     'kcal': kcal,
     'isFavorite': isFavorite,
     'nutrients': nutrients,
+    'barcode': barcode,
   };
 
   factory CustomFood.fromJson(Map<String, dynamic> json) {
@@ -56,6 +63,7 @@ class CustomFood {
             (k, v) => MapEntry(k, (v as num).toDouble()),
           ) ??
           const {},
+      barcode: json['barcode'] as String?,
     );
   }
 }

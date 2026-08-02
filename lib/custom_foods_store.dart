@@ -36,6 +36,7 @@ class CustomFoodsStore {
     required double fatG,
     required double kcal,
     Map<String, double> nutrients = const {},
+    String? barcode,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final foods = await loadAll();
@@ -52,6 +53,7 @@ class CustomFoodsStore {
       kcal: kcal,
       isFavorite: false,
       nutrients: nutrients,
+      barcode: barcode,
     );
     foods.add(food);
     await _saveAll(prefs, foods);
@@ -69,6 +71,7 @@ class CustomFoodsStore {
     double? kcal,
     bool? isFavorite,
     Map<String, double>? nutrients,
+    String? barcode,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final foods = await loadAll();
@@ -87,6 +90,7 @@ class CustomFoodsStore {
       kcal: kcal ?? existing.kcal,
       isFavorite: isFavorite ?? existing.isFavorite,
       nutrients: nutrients ?? existing.nutrients,
+      barcode: barcode ?? existing.barcode,
     );
     foods[index] = updated;
     await _saveAll(prefs, foods);
@@ -98,6 +102,16 @@ class CustomFoodsStore {
     final foods = await loadAll();
     foods.removeWhere((f) => f.id == id);
     await _saveAll(prefs, foods);
+  }
+
+  /// Finds a previously-scanned food by barcode, if one exists — used to
+  /// detect re-scanning a product that's already in the library.
+  Future<CustomFood?> findByBarcode(String barcode) async {
+    final foods = await loadAll();
+    for (final food in foods) {
+      if (food.barcode == barcode) return food;
+    }
+    return null;
   }
 
   List<CustomFood> _seedFoods() => [

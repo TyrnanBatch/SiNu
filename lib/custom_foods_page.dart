@@ -65,6 +65,25 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
   }
 
   Future<void> _edit(CustomFood food) async {
+    if (food.source == 'scanned') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Edit scanned item?'),
+          content: Text(
+            '"${food.name}" came from a barcode scan. Editing it will change the saved values away '
+            'from what was on the label. If you want the original data back later, just re-scan the '
+            'same barcode and choose "Reset to Scanned Data".',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Edit Anyway')),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
     final updated = await Navigator.push<CustomFood>(
       context,
       MaterialPageRoute(builder: (context) => CreateFoodPage(existing: food)),
@@ -92,34 +111,6 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
     );
     if (food == null || !mounted) return;
     setState(() => _foods.add(food));
-  }
-
-  Future<void> _viewScanned(CustomFood food) async {
-    final shouldCopy = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Barcode scanned item'),
-        content: Text(
-          '"${food.name}" came from a barcode scan, so its values can\'t be edited directly. '
-          'You can copy it into a new food and edit that instead.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Close')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Copy to New Food'),
-          ),
-        ],
-      ),
-    );
-    if (shouldCopy != true || !mounted) return;
-
-    final food2 = await Navigator.push<CustomFood>(
-      context,
-      MaterialPageRoute(builder: (context) => CreateFoodPage(initial: food)),
-    );
-    if (food2 == null || !mounted) return;
-    setState(() => _foods.add(food2));
   }
 
   Future<void> _delete(CustomFood food) async {
@@ -232,7 +223,6 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
           food: food,
           onToggleFavorite: () => _toggleFavorite(food),
           onEdit: () => _edit(food),
-          onViewScanned: () => _viewScanned(food),
           onDelete: () => _delete(food),
         );
       },
@@ -244,7 +234,6 @@ class CustomFoodTile extends StatelessWidget {
   final CustomFood food;
   final VoidCallback onToggleFavorite;
   final VoidCallback onEdit;
-  final VoidCallback onViewScanned;
   final VoidCallback onDelete;
 
   const CustomFoodTile({
@@ -252,7 +241,6 @@ class CustomFoodTile extends StatelessWidget {
     required this.food,
     required this.onToggleFavorite,
     required this.onEdit,
-    required this.onViewScanned,
     required this.onDelete,
   });
 
@@ -281,7 +269,21 @@ class CustomFoodTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(food.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        food.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isScanned) ...[
+                      const SizedBox(width: 6),
+                      const Icon(Icons.qr_code, size: 14, color: AppColors.textMuted),
+                    ],
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text(
                   '${food.kcal.round()} kcal / ${food.portionGrams.round()} · '
@@ -291,13 +293,7 @@ class CustomFoodTile extends StatelessWidget {
               ],
             ),
           ),
-          if (isScanned)
-            IconButton(
-              icon: const Icon(Icons.qr_code, size: 20, color: AppColors.textSecondary),
-              onPressed: onViewScanned,
-            )
-          else
-            IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: onEdit),
+          IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: onEdit),
           IconButton(icon: const Icon(Icons.delete_outline, size: 20), onPressed: onDelete),
         ],
       ),
