@@ -20,9 +20,16 @@ class AddFoodPage extends StatefulWidget {
   State<AddFoodPage> createState() => _AddFoodPageState();
 }
 
-class _AddFoodPageState extends State<AddFoodPage> {
+class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStateMixin {
+  static const _allTab = 0;
+  static const _customTab = 1;
+  static const _favouritesTab = 2;
+  static const _scannedTab = 3;
+  static const _commonTab = 4;
+
   final CustomFoodsStore _store = CustomFoodsStore();
   final UsdaFoodsClient _usda = UsdaFoodsClient();
+  late final TabController _tabController;
 
   String _query = '';
   late List<CustomFood> _foods;
@@ -36,18 +43,38 @@ class _AddFoodPageState extends State<AddFoodPage> {
   void initState() {
     super.initState();
     _foods = List.of(widget.foods);
+    _tabController = TabController(length: 5, vsync: this);
+    _tabController.addListener(_onTabChanged);
   }
 
   @override
   void dispose() {
     _usdaDebounce?.cancel();
+    _tabController.dispose();
     super.dispose();
   }
 
-  List<CustomFood> get _filtered {
-    if (_query.isEmpty) return _foods;
-    final q = _query.toLowerCase();
-    return _foods.where((f) => f.name.toLowerCase().contains(q)).toList();
+  /// Only the All and Common Foods tabs search USDA — Favourites/Scanned
+  /// are local-only, so there's no reason to hit the network for them.
+  bool get _usdaTabActive => _tabController.index == _allTab || _tabController.index == _commonTab;
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    final query = _query.trim();
+    if (_usdaTabActive && query.isNotEmpty && _usdaResults.isEmpty && !_usdaLoading && _usdaError == null) {
+      _searchUsda(query);
+    }
+    setState(() {});
+  }
+
+  List<CustomFood> _localFoodsFor(int tabIndex) {
+    Iterable<CustomFood> source = _foods;
+    if (tabIndex == _customTab) source = source.where((f) => f.source == 'custom');
+    if (tabIndex == _favouritesTab) source = source.where((f) => f.isFavorite);
+    if (tabIndex == _scannedTab) source = source.where((f) => f.source == 'scanned');
+    final q = _query.trim().toLowerCase();
+    if (q.isNotEmpty) source = source.where((f) => f.name.toLowerCase().contains(q));
+    return source.toList();
   }
 
   void _onQueryChanged(String value) {
@@ -55,7 +82,7 @@ class _AddFoodPageState extends State<AddFoodPage> {
 
     _usdaDebounce?.cancel();
     final query = value.trim();
-    if (query.isEmpty) {
+    if (query.isEmpty || !_usdaTabActive) {
       setState(() {
         _usdaResults = [];
         _usdaLoading = false;
@@ -69,6 +96,7 @@ class _AddFoodPageState extends State<AddFoodPage> {
   }
 
   Future<void> _searchUsda(String query) async {
+    setState(() => _usdaLoading = true);
     try {
       final results = await _usda.search(query);
       if (!mounted || query != _query.trim()) return;
@@ -130,6 +158,101 @@ class _AddFoodPageState extends State<AddFoodPage> {
     await _selectFood(food);
   }
 
+  /// Loading/error/empty/results states for a USDA results block — reused
+  /// by both the All tab (appended after local matches) and the Common
+  /// Foods tab (shown on its own).
+  List<Widget> _usdaSectionChildren() {
+    if (_usdaLoading) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+    if (_usdaError != null) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(_usdaError!, style: const TextStyle(color: Colors.white38, fontSize: 13)),
+        ),
+      ];
+    }
+    if (_usdaResults.isEmpty) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text('No common foods found', style: TextStyle(color: Colors.white38, fontSize: 13)),
+        ),
+      ];
+    }
+    return [
+      for (final result in _usdaResults)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: UsdaFoodListTile(result: result, onTap: () => _selectUsdaFood(result)),
+        ),
+    ];
+  }
+
+  /// All tab: local matches (any source) plus, while actively searching, a
+  /// USDA section underneath.
+  Widget _buildAllTab() {
+    final foods = _localFoodsFor(_allTab);
+    final query = _query.trim();
+
+    if (query.isEmpty) {
+      if (foods.isEmpty) {
+        return const Center(child: Text('No foods found', style: TextStyle(color: Colors.white38)));
+      }
+      return ListView.separated(
+        itemCount: foods.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (context, index) => FoodListTile(food: foods[index], onTap: () => _selectFood(foods[index])),
+      );
+    }
+
+    return ListView(
+      children: [
+        if (foods.isNotEmpty) ...[
+          _sectionLabel('YOUR FOODS'),
+          for (final food in foods)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: FoodListTile(food: food, onTap: () => _selectFood(food)),
+            ),
+          const SizedBox(height: 16),
+        ],
+        _sectionLabel('COMMON FOODS (USDA)'),
+        const SizedBox(height: 4),
+        ..._usdaSectionChildren(),
+      ],
+    );
+  }
+
+  /// Favourites/Scanned tabs: local-only, no USDA section ever.
+  Widget _buildLocalTab(int tabIndex, String emptyMessage) {
+    final foods = _localFoodsFor(tabIndex);
+    if (foods.isEmpty) {
+      return Center(child: Text(emptyMessage, style: const TextStyle(color: Colors.white38)));
+    }
+    return ListView.separated(
+      itemCount: foods.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, index) => FoodListTile(food: foods[index], onTap: () => _selectFood(foods[index])),
+    );
+  }
+
+  /// Common Foods tab: USDA only, needs a query to search against.
+  Widget _buildCommonFoodsTab() {
+    if (_query.trim().isEmpty) {
+      return const Center(
+        child: Text('Type to search common foods', style: TextStyle(color: Colors.white38)),
+      );
+    }
+    return ListView(children: _usdaSectionChildren());
+  }
+
   Widget _sectionLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -140,65 +263,27 @@ class _AddFoodPageState extends State<AddFoodPage> {
     );
   }
 
-  Widget _buildResults() {
-    final query = _query.trim();
-
-    if (query.isEmpty) {
-      if (_filtered.isEmpty) {
-        return const Center(child: Text('No foods found', style: TextStyle(color: Colors.white38)));
-      }
-      return ListView.separated(
-        itemCount: _filtered.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          final food = _filtered[index];
-          return FoodListTile(food: food, onTap: () => _selectFood(food));
-        },
-      );
-    }
-
-    return ListView(
-      children: [
-        if (_filtered.isNotEmpty) ...[
-          _sectionLabel('YOUR FOODS'),
-          for (final food in _filtered)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: FoodListTile(food: food, onTap: () => _selectFood(food)),
-            ),
-          const SizedBox(height: 16),
-        ],
-        _sectionLabel('COMMON FOODS (USDA)'),
-        const SizedBox(height: 4),
-        if (_usdaLoading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_usdaError != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(_usdaError!, style: const TextStyle(color: Colors.white38, fontSize: 13)),
-          )
-        else if (_usdaResults.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('No common foods found', style: TextStyle(color: Colors.white38, fontSize: 13)),
-          )
-        else
-          for (final result in _usdaResults)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: UsdaFoodListTile(result: result, onTap: () => _selectUsdaFood(result)),
-            ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Food')),
+      appBar: AppBar(
+        title: const Text('Add Food'),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelColor: AppColors.accent,
+          unselectedLabelColor: AppColors.textMuted,
+          indicatorColor: AppColors.accent,
+          tabs: const [
+            Tab(text: 'All'),
+            Tab(text: 'Custom'),
+            Tab(text: 'Favourites'),
+            Tab(text: 'Scanned'),
+            Tab(text: 'Common Foods'),
+          ],
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -244,7 +329,18 @@ class _AddFoodPageState extends State<AddFoodPage> {
               ],
             ),
             const SizedBox(height: 16),
-            Expanded(child: _buildResults()),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildAllTab(),
+                  _buildLocalTab(_customTab, 'No custom foods yet'),
+                  _buildLocalTab(_favouritesTab, 'No favourites yet'),
+                  _buildLocalTab(_scannedTab, 'No scanned foods yet'),
+                  _buildCommonFoodsTab(),
+                ],
+              ),
+            ),
           ],
         ),
       ),
