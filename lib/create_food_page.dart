@@ -1,0 +1,443 @@
+import 'package:flutter/material.dart';
+
+import 'custom_foods_store.dart';
+import 'food_avatar.dart';
+import 'models.dart';
+import 'nutrients.dart';
+import 'theme.dart';
+import 'user_targets.dart';
+
+class CreateFoodPage extends StatefulWidget {
+  /// When set, the page edits this food (PATCH) instead of creating a new one.
+  final CustomFood? existing;
+
+  /// When set (and [existing] is not), prefills the form from this food but
+  /// still creates a brand new food — used to copy a barcode-scanned item
+  /// into an editable one.
+  final CustomFood? initial;
+
+  const CreateFoodPage({super.key, this.existing, this.initial});
+
+  @override
+  State<CreateFoodPage> createState() => _CreateFoodPageState();
+}
+
+class _CreateFoodPageState extends State<CreateFoodPage> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _portionController;
+  late final TextEditingController _proteinController;
+  late final TextEditingController _carbsController;
+  late final TextEditingController _fatController;
+  late final TextEditingController _kcalController;
+  final Map<String, TextEditingController> _nutrientControllers = {};
+
+  bool _saving = false;
+  String? _submitError;
+  bool _showMoreNutrients = false;
+  UserTargets _targets = UserTargets.defaults;
+
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    UserTargetsStore().load().then((t) {
+      if (!mounted) return;
+      setState(() => _targets = t);
+    });
+    final existing = widget.existing;
+    final prefill = existing ?? widget.initial;
+    final isCopy = existing == null && widget.initial != null;
+    _nameController = TextEditingController(
+      text: isCopy ? '${prefill!.name} (copy)' : (prefill?.name ?? ''),
+    );
+    _portionController = TextEditingController(text: (prefill?.portionGrams ?? 100).round().toString());
+    _proteinController = TextEditingController(text: prefill != null ? _fmt(prefill.proteinG) : '');
+    _carbsController = TextEditingController(text: prefill != null ? _fmt(prefill.carbsG) : '');
+    _fatController = TextEditingController(text: prefill != null ? _fmt(prefill.fatG) : '');
+    _kcalController = TextEditingController(text: prefill != null ? _fmt(prefill.kcal) : '');
+
+    for (final def in nutrientCatalog) {
+      final value = prefill?.nutrients[def.key];
+      _nutrientControllers[def.key] = TextEditingController(
+        text: (value != null && value != 0) ? _fmt(value) : '',
+      );
+    }
+
+    // Live-update the % of daily target bars as the user types.
+    for (final controller in [
+      _proteinController,
+      _carbsController,
+      _fatController,
+      _kcalController,
+      ..._nutrientControllers.values,
+    ]) {
+      controller.addListener(_onValueChanged);
+    }
+  }
+
+  void _onValueChanged() => setState(() {});
+
+  String _fmt(double n) => n == n.roundToDouble() ? n.round().toString() : n.toString();
+
+  double _read(TextEditingController controller) => double.tryParse(controller.text) ?? 0;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _portionController.dispose();
+    _proteinController.dispose();
+    _carbsController.dispose();
+    _fatController.dispose();
+    _kcalController.dispose();
+    for (final controller in _nutrientControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  String? _requiredNumber(String? value) {
+    if (value == null || value.isEmpty) return 'Required';
+    final n = double.tryParse(value);
+    if (n == null || n < 0) return 'Enter a valid number';
+    return null;
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _saving = true;
+      _submitError = null;
+    });
+
+    final nutrients = {
+      for (final def in nutrientCatalog) def.key: _read(_nutrientControllers[def.key]!),
+    };
+
+    try {
+      final CustomFood food;
+      final store = CustomFoodsStore();
+      if (_isEditing) {
+        food = await store.update(
+          widget.existing!.id,
+          name: _nameController.text.trim(),
+          portionGrams: double.parse(_portionController.text),
+          proteinG: double.parse(_proteinController.text),
+          carbsG: double.parse(_carbsController.text),
+          fatG: double.parse(_fatController.text),
+          kcal: double.parse(_kcalController.text),
+          nutrients: nutrients,
+        );
+      } else {
+        food = await store.create(
+          name: _nameController.text.trim(),
+          source: 'custom',
+          portionGrams: double.parse(_portionController.text),
+          proteinG: double.parse(_proteinController.text),
+          carbsG: double.parse(_carbsController.text),
+          fatG: double.parse(_fatController.text),
+          kcal: double.parse(_kcalController.text),
+          nutrients: nutrients,
+        );
+      }
+      if (!mounted) return;
+      Navigator.pop(context, food);
+    } catch (e) {
+      setState(() {
+        _saving = false;
+        _submitError = 'Could not save custom food.';
+      });
+    }
+  }
+
+  InputDecoration _fieldDecoration(String label, {Widget? prefixIcon, String? suffixText}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+      prefixIcon: prefixIcon,
+      suffixText: suffixText,
+      suffixStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(vertical: 9),
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+    );
+  }
+
+  Widget _dot(Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 14, right: 8),
+      child: Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+    );
+  }
+
+  Widget _sectionLabel(IconData icon, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 5),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: AppColors.accent),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _card(List<Widget> fields) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < fields.length; i++) ...[
+            if (i > 0) const Divider(height: 1, color: AppColors.border),
+            fields[i],
+          ],
+        ],
+      ),
+    );
+  }
+
+  static const _numberStyle = TextStyle(fontSize: 13);
+
+  /// Thin horizontal bar showing [value] as a percentage of [target],
+  /// capped at 999%.
+  Widget _percentBar(double value, double target, Color color) {
+    final pct = target <= 0 ? 0.0 : (value / target).clamp(0, 1).toDouble();
+    final rawPct = target <= 0 ? 0 : (value / target * 100).round();
+    final pctLabel = '${rawPct > 999 ? 999 : rawPct}%';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Row(
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: pct,
+                minHeight: 5,
+                backgroundColor: Colors.white12,
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 34,
+            child: Text(
+              pctLabel,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A macro field (kcal/protein/carbs/fat) with its "% of daily target" bar
+  /// underneath, so the target-based bars all share one look. The suffix
+  /// reads as "typed value/target unit", e.g. "10/900mcg".
+  Widget _macroFieldWithBar({
+    required TextEditingController controller,
+    required String label,
+    required Widget prefixIcon,
+    required String unit,
+    required double target,
+    required Color color,
+  }) {
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextFormField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: _numberStyle,
+            decoration: _fieldDecoration(
+              label,
+              prefixIcon: prefixIcon,
+              suffixText: '/${_fmt(target)}$unit',
+            ),
+            validator: _requiredNumber,
+          ),
+          _percentBar(_read(controller), target, color),
+        ],
+      ),
+    );
+  }
+
+  Widget _nutrientFieldWithBar(NutrientDef def) {
+    final controller = _nutrientControllers[def.key]!;
+    final rdi = def.rdi;
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextFormField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: _numberStyle,
+            decoration: _fieldDecoration(
+              def.label,
+              suffixText: rdi != null ? '/${_fmt(rdi)}${def.unit}' : def.unit,
+            ),
+          ),
+          if (rdi != null) _percentBar(_read(controller), rdi, AppColors.accent),
+        ],
+      ),
+    );
+  }
+
+  Widget _nutrientSection(NutrientGroup group, IconData icon) {
+    final defs = nutrientCatalog.where((d) => d.group == group).toList();
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionLabel(icon, nutrientGroupLabels[group]!),
+          _card([for (final def in defs) _nutrientFieldWithBar(def)]),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(_isEditing ? 'Edit Custom Food' : 'Create Custom Food')),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Center(child: FoodAvatar(size: 64)),
+            const SizedBox(height: 16),
+            _sectionLabel(Icons.info_outline, 'DETAILS'),
+            _card([
+              TextFormField(
+                controller: _nameController,
+                decoration: _fieldDecoration('Name', prefixIcon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textMuted)),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              ),
+              TextFormField(
+                controller: _portionController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: _numberStyle,
+                decoration: _fieldDecoration(
+                  'Reference portion',
+                  prefixIcon: const Icon(Icons.scale_outlined, size: 18, color: AppColors.textMuted),
+                  suffixText: 'g',
+                ),
+                validator: _requiredNumber,
+              ),
+            ]),
+            const SizedBox(height: 16),
+            _sectionLabel(Icons.pie_chart_outline_rounded, 'MACROS FOR THAT PORTION'),
+            _card([
+              _macroFieldWithBar(
+                controller: _kcalController,
+                label: 'Calories',
+                prefixIcon: const Icon(Icons.local_fire_department, color: AppColors.accent, size: 20),
+                unit: 'kcal',
+                target: _targets.calories,
+                color: AppColors.accent,
+              ),
+              _macroFieldWithBar(
+                controller: _proteinController,
+                label: 'Protein',
+                prefixIcon: _dot(AppColors.protein),
+                unit: 'g',
+                target: _targets.proteinG,
+                color: AppColors.protein,
+              ),
+              _macroFieldWithBar(
+                controller: _carbsController,
+                label: 'Carbs',
+                prefixIcon: _dot(AppColors.carbs),
+                unit: 'g',
+                target: _targets.carbsG,
+                color: AppColors.carbs,
+              ),
+              _macroFieldWithBar(
+                controller: _fatController,
+                label: 'Fat',
+                prefixIcon: _dot(AppColors.fat),
+                unit: 'g',
+                target: _targets.fatG,
+                color: AppColors.fat,
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => setState(() => _showMoreNutrients = !_showMoreNutrients),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _showMoreNutrients ? 'Hide More Nutrients' : 'Show More Nutrients',
+                        style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        _showMoreNutrients ? Icons.expand_less : Icons.expand_more,
+                        color: AppColors.accent,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (_showMoreNutrients) ...[
+              _nutrientSection(NutrientGroup.vitamins, Icons.wb_sunny_outlined),
+              _nutrientSection(NutrientGroup.minerals, Icons.diamond_outlined),
+              _nutrientSection(NutrientGroup.fats, Icons.opacity_outlined),
+              _nutrientSection(NutrientGroup.other, Icons.info_outline),
+            ],
+            if (_submitError != null) ...[
+              const SizedBox(height: 16),
+              Text(_submitError!, style: const TextStyle(color: Colors.redAccent)),
+            ],
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _saving ? null : _submit,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Save'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
