@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'app_drawer.dart';
 import 'nutrition_calc.dart';
 import 'theme.dart';
+import 'user_profile.dart';
 import 'user_targets.dart';
 
 class NutritionPage extends StatefulWidget {
@@ -86,6 +87,8 @@ class _NutritionPageState extends State<NutritionPage> {
   }
 
   Future<void> _getRecommendations() async {
+    final profile = await UserProfileStore().load();
+    if (!mounted) return;
     final result = await showModalBottomSheet<RecommendationInput>(
       context: context,
       backgroundColor: AppColors.card,
@@ -93,12 +96,16 @@ class _NutritionPageState extends State<NutritionPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => _RecommendationSheet(initialSteps: _read(_stepsController).round()),
+      builder: (context) => _RecommendationSheet(initialSteps: _read(_stepsController).round(), initialProfile: profile),
     );
     if (result == null || !mounted) return;
     _applyTargets(computeRecommendation(result));
     _stepsController.text = _fmt(result.dailySteps.toDouble());
     setState(() {});
+
+    await UserProfileStore().save(
+      UserProfile(sex: result.sex, heightCm: result.heightCm, weightKg: result.weightKg, age: result.age),
+    );
   }
 
   InputDecoration _fieldDecoration(String label, {Widget? prefixIcon, String? suffixText}) {
@@ -391,8 +398,9 @@ class _MacroRingPainter extends CustomPainter {
 
 class _RecommendationSheet extends StatefulWidget {
   final int initialSteps;
+  final UserProfile? initialProfile;
 
-  const _RecommendationSheet({required this.initialSteps});
+  const _RecommendationSheet({required this.initialSteps, this.initialProfile});
 
   @override
   State<_RecommendationSheet> createState() => _RecommendationSheetState();
@@ -400,12 +408,20 @@ class _RecommendationSheet extends StatefulWidget {
 
 class _RecommendationSheetState extends State<_RecommendationSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _heightController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _ageController = TextEditingController();
+  late final _heightController = TextEditingController(
+    text: widget.initialProfile != null ? _fmt(widget.initialProfile!.heightCm) : '',
+  );
+  late final _weightController = TextEditingController(
+    text: widget.initialProfile != null ? _fmt(widget.initialProfile!.weightKg) : '',
+  );
+  late final _ageController = TextEditingController(
+    text: widget.initialProfile != null ? '${widget.initialProfile!.age}' : '',
+  );
   late final _stepsController = TextEditingController(text: '${widget.initialSteps}');
-  BiologicalSex _sex = BiologicalSex.male;
+  late BiologicalSex _sex = widget.initialProfile?.sex ?? BiologicalSex.male;
   FitnessGoal _goal = FitnessGoal.maintain;
+
+  String _fmt(double n) => n == n.roundToDouble() ? n.round().toString() : n.toString();
 
   @override
   void dispose() {

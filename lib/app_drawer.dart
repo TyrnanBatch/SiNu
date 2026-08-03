@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'custom_foods_page.dart';
 import 'nutrition_page.dart';
+import 'profile_page.dart';
+import 'settings_page.dart';
 import 'theme.dart';
 import 'trends_page.dart';
 
@@ -34,25 +36,9 @@ class AppDrawer extends StatelessWidget {
       case AppSection.trends:
         navigator.push(MaterialPageRoute(builder: (_) => const TrendsPage()));
       case AppSection.settings:
-        navigator.push(
-          MaterialPageRoute(
-            builder: (_) => const ComingSoonPage(
-              title: 'Settings',
-              icon: Icons.settings_outlined,
-              section: AppSection.settings,
-            ),
-          ),
-        );
+        navigator.push(MaterialPageRoute(builder: (_) => const SettingsPage()));
       case AppSection.profile:
-        navigator.push(
-          MaterialPageRoute(
-            builder: (_) => const ComingSoonPage(
-              title: 'Profile',
-              icon: Icons.person_outline,
-              section: AppSection.profile,
-            ),
-          ),
-        );
+        navigator.push(MaterialPageRoute(builder: (_) => const ProfilePage()));
     }
   }
 
@@ -115,14 +101,12 @@ class AppDrawer extends StatelessWidget {
                 icon: Icons.settings_outlined,
                 label: 'Settings',
                 active: current == AppSection.settings,
-                badge: 'Soon',
                 onTap: () => _go(context, AppSection.settings),
               ),
               _DrawerItem(
                 icon: Icons.person_outline,
                 label: 'Profile',
                 active: current == AppSection.profile,
-                badge: 'Soon',
                 onTap: () => _go(context, AppSection.profile),
               ),
             ],
@@ -137,7 +121,6 @@ class _DrawerItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
-  final String? badge;
   final VoidCallback onTap;
 
   const _DrawerItem({
@@ -145,7 +128,6 @@ class _DrawerItem extends StatelessWidget {
     required this.label,
     required this.active,
     required this.onTap,
-    this.badge,
   });
 
   @override
@@ -176,15 +158,6 @@ class _DrawerItem extends StatelessWidget {
                   ),
                 ),
               ),
-              if (badge != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(20)),
-                  child: Text(
-                    badge!,
-                    style: const TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w600),
-                  ),
-                ),
             ],
           ),
         ),
@@ -193,29 +166,3 @@ class _DrawerItem extends StatelessWidget {
   }
 }
 
-/// Placeholder for sections that don't have a real feature yet.
-class ComingSoonPage extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final AppSection section;
-
-  const ComingSoonPage({super.key, required this.title, required this.icon, required this.section});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      drawer: AppDrawer(current: section),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48, color: Colors.white24),
-            const SizedBox(height: 12),
-            const Text('Coming soon', style: TextStyle(color: Colors.white38)),
-          ],
-        ),
-      ),
-    );
-  }
-}

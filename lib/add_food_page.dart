@@ -129,21 +129,33 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
     final grams = await AmountSheet.show(context, title: result.description, initialGrams: 100);
     if (grams == null || !mounted) return;
 
-    final food = await _store.create(
-      name: result.description,
-      source: 'usda',
-      portionGrams: 100,
-      proteinG: result.proteinG,
-      carbsG: result.carbsG,
-      fatG: result.fatG,
-      kcal: result.kcal,
-      originalProteinG: result.proteinG,
-      originalCarbsG: result.carbsG,
-      originalFatG: result.fatG,
-      originalKcal: result.kcal,
-    );
-    if (!mounted) return;
-    setState(() => _foods.add(food));
+    // Re-picking the same USDA result shouldn't spawn a new library entry
+    // every time — reuse the one already created for it, edits and all.
+    CustomFood? food;
+    for (final f in _foods) {
+      if (f.source == 'usda' && f.name == result.description) {
+        food = f;
+        break;
+      }
+    }
+
+    if (food == null) {
+      food = await _store.create(
+        name: result.description,
+        source: 'usda',
+        portionGrams: 100,
+        proteinG: result.proteinG,
+        carbsG: result.carbsG,
+        fatG: result.fatG,
+        kcal: result.kcal,
+        originalProteinG: result.proteinG,
+        originalCarbsG: result.carbsG,
+        originalFatG: result.fatG,
+        originalKcal: result.kcal,
+      );
+      if (!mounted) return;
+      setState(() => _foods.add(food!));
+    }
     Navigator.pop(context, LoggedItem.fromCustomFood(food, grams));
   }
 

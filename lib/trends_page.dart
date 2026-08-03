@@ -8,6 +8,7 @@ import 'models.dart';
 import 'storage.dart';
 import 'theme.dart';
 import 'user_targets.dart';
+import 'weight_store.dart';
 
 class _DayTotals {
   final DateTime date;
@@ -17,6 +18,7 @@ class _DayTotals {
   final double fat;
   final bool hasData;
   final int? steps;
+  final double? weightKg;
 
   const _DayTotals({
     required this.date,
@@ -26,6 +28,7 @@ class _DayTotals {
     required this.fat,
     required this.hasData,
     this.steps,
+    this.weightKg,
   });
 }
 
@@ -77,6 +80,7 @@ class _TrendsPageState extends State<TrendsPage> {
     setState(() => _loading = true);
     final targets = await UserTargetsStore().load();
     final storage = MealsStorage();
+    final weightStore = WeightStore();
     final today = _today;
 
     final days = <_DayTotals>[];
@@ -84,6 +88,7 @@ class _TrendsPageState extends State<TrendsPage> {
       final date = today.subtract(Duration(days: i));
       final meals = await storage.loadMeals(date) ?? const <MealData>[];
       final steps = _stepsAuthorized ? await _health.stepsForDay(date) : null;
+      final weightKg = await weightStore.loadWeight(date);
       days.add(
         _DayTotals(
           date: date,
@@ -93,6 +98,7 @@ class _TrendsPageState extends State<TrendsPage> {
           fat: meals.fold(0.0, (s, m) => s + m.fatTotal),
           hasData: meals.isNotEmpty,
           steps: steps,
+          weightKg: weightKg,
         ),
       );
     }
@@ -226,11 +232,56 @@ class _TrendsPageState extends State<TrendsPage> {
                   const SizedBox(height: 24),
                   _sectionLabel(Icons.directions_walk, 'STEPS'),
                   _card(_buildStepsSection(daysWithSteps: daysWithSteps, avgSteps: avgSteps)),
+                  const SizedBox(height: 24),
+                  _sectionLabel(Icons.monitor_weight_outlined, 'WEIGHT'),
+                  _card(_buildWeightSection()),
                 ],
               ),
             ),
     );
   }
+
+  Widget _buildWeightSection() {
+    final daysWithWeight = _days.where((d) => d.weightKg != null).toList();
+    if (daysWithWeight.isEmpty) {
+      return const Text(
+        'No weight logged yet — log it from the Profile page to see the trend here.',
+        style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+      );
+    }
+
+    final current = daysWithWeight.last.weightKg!;
+    final first = daysWithWeight.first.weightKg!;
+    final change = current - first;
+    final avg = daysWithWeight.fold(0.0, (s, d) => s + d.weightKg!) / daysWithWeight.length;
+
+    return Column(
+      children: [
+        _WeightLineChart(
+          dates: _days.map((d) => d.date).toList(),
+          values: _days.map((d) => d.weightKg).toList(),
+          labelFor: _shortLabel,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _StatChip(label: 'Current', value: '${_fmtWeight(current)} kg')),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _StatChip(
+                label: 'Change',
+                value: '${change > 0 ? '+' : ''}${_fmtWeight(change)} kg',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: _StatChip(label: 'Avg', value: '${_fmtWeight(avg)} kg')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _fmtWeight(double n) => n == n.roundToDouble() ? n.round().toString() : n.toStringAsFixed(1);
 
   Widget _buildStepsSection({required List<_DayTotals> daysWithSteps, required double avgSteps}) {
     if (!HealthService.isSupported) {
@@ -454,6 +505,106 @@ class _BarChart extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Line chart of daily weight. Days with no logged weight leave a gap in
+/// the line rather than dropping to zero (unlike the bar charts, an
+/// absolute weight value near zero would be meaningless).
+class _WeightLineChart extends StatelessWidget {
+  final List<DateTime> dates;
+  final List<double?> values;
+  final String Function(DateTime) labelFor;
+
+  const _WeightLineChart({required this.dates, required this.values, required this.labelFor});
+
+  @override
+  Widget build(BuildContext context) {
+    final present = values.whereType<double>().toList();
+    const chartHeight = 160.0;
+    if (present.isEmpty) {
+      return const SizedBox(
+        height: chartHeight,
+        child: Center(child: Text('No data', style: TextStyle(color: AppColors.textMuted))),
+      );
+    }
+    final minVal = present.reduce(math.min);
+    final maxVal = present.reduce(math.max);
+    final range = (maxVal - minVal) < 1 ? 1.0 : (maxVal - minVal);
+
+    final labelStep = math.max(1, (dates.length / 6).ceil());
+
+    return Column(
+      children: [
+        SizedBox(
+          height: chartHeight,
+          width: double.infinity,
+          child: CustomPaint(
+            painter: _WeightLinePainter(values: values, minVal: minVal, range: range),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            for (var i = 0; i < dates.length; i++)
+              Expanded(
+                child: (i % labelStep == 0 || i == dates.length - 1)
+                    ? Text(
+                        labelFor(dates[i]),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _WeightLinePainter extends CustomPainter {
+  final List<double?> values;
+  final double minVal;
+  final double range;
+
+  _WeightLinePainter({required this.values, required this.minVal, required this.range});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2) return;
+    const paddingFrac = 0.12;
+    final usableHeight = size.height * (1 - 2 * paddingFrac);
+    final stepX = size.width / (values.length - 1);
+
+    double yFor(double v) {
+      final t = (v - minVal) / range;
+      return size.height * paddingFrac + usableHeight * (1 - t);
+    }
+
+    final linePaint = Paint()
+      ..color = AppColors.weight
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final dotPaint = Paint()..color = AppColors.weight;
+
+    Offset? prev;
+    for (var i = 0; i < values.length; i++) {
+      final v = values[i];
+      if (v == null) {
+        prev = null;
+        continue;
+      }
+      final point = Offset(i * stepX, yFor(v));
+      if (prev != null) canvas.drawLine(prev, point, linePaint);
+      canvas.drawCircle(point, 3, dotPaint);
+      prev = point;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WeightLinePainter oldDelegate) =>
+      oldDelegate.values != values || oldDelegate.minVal != minVal || oldDelegate.range != range;
 }
 
 class _DashedLine extends StatelessWidget {

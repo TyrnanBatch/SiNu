@@ -38,14 +38,19 @@ class RecommendationInput {
 /// extrapolated linearly from there.
 const _kcalPerStepPerKg = 0.04 / 70;
 
+/// Mifflin-St Jeor basal metabolic rate.
+double computeBmr({required BiologicalSex sex, required double heightCm, required double weightKg, required int age}) {
+  return sex == BiologicalSex.male
+      ? 10 * weightKg + 6.25 * heightCm - 5 * age + 5
+      : 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
+}
+
 /// Mifflin-St Jeor BMR, scaled by a flat non-exercise-activity multiplier
 /// plus estimated calories burned walking (from daily steps), adjusted for
 /// goal, then split into macros: 0.7g fat/kg bodyweight, 0.8g protein/lb
 /// bodyweight, remaining calories filled with carbs.
 UserTargets computeRecommendation(RecommendationInput input) {
-  final bmr = input.sex == BiologicalSex.male
-      ? 10 * input.weightKg + 6.25 * input.heightCm - 5 * input.age + 5
-      : 10 * input.weightKg + 6.25 * input.heightCm - 5 * input.age - 161;
+  final bmr = computeBmr(sex: input.sex, heightCm: input.heightCm, weightKg: input.weightKg, age: input.age);
   final walkingKcal = input.dailySteps * input.weightKg * _kcalPerStepPerKg;
   final tdee = bmr * 1.2 + walkingKcal;
   final calories = (tdee + input.goal.calorieAdjustment).clamp(1200, 6000).toDouble();
