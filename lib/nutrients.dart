@@ -3,7 +3,7 @@
 /// only surfaced behind "Show More Nutrients" on the create/edit food page.
 library;
 
-enum NutrientGroup { vitamins, minerals, fats, other }
+enum NutrientGroup { vitamins, minerals, aminoAcids, fats, other }
 
 class NutrientDef {
   final String key;
@@ -11,8 +11,10 @@ class NutrientDef {
   final String unit;
 
   /// Reference daily intake used to compute the "% of daily value" bar.
-  /// Null means there's no established daily value (e.g. trans fat) — the
-  /// field is still collected, just shown without a percentage bar.
+  /// Null means there's no established daily value (only Total Sugars, by
+  /// design — every other nutrient below has at least a reasonable
+  /// reference figure) — the field is still collected, just shown without
+  /// a percentage bar.
   final double? rdi;
   final NutrientGroup group;
 
@@ -47,17 +49,30 @@ const List<NutrientDef> nutrientCatalog = [
   NutrientDef('manganese', 'Manganese', 'mg', 2.3, NutrientGroup.minerals),
   NutrientDef('selenium', 'Selenium', 'mcg', 55, NutrientGroup.minerals),
   NutrientDef('iodine', 'Iodine', 'mcg', 150, NutrientGroup.minerals),
+  NutrientDef('chromium', 'Chromium', 'mcg', 35, NutrientGroup.minerals),
+  NutrientDef('molybdenum', 'Molybdenum', 'mcg', 45, NutrientGroup.minerals),
+
+  // --- Amino acids (essential — WHO/FAO/UNU 2007, 70kg reference adult) ---
+  NutrientDef('histidine', 'Histidine', 'g', 0.7, NutrientGroup.aminoAcids),
+  NutrientDef('isoleucine', 'Isoleucine', 'g', 1.4, NutrientGroup.aminoAcids),
+  NutrientDef('leucine', 'Leucine', 'g', 2.7, NutrientGroup.aminoAcids),
+  NutrientDef('lysine', 'Lysine', 'g', 2.1, NutrientGroup.aminoAcids),
+  NutrientDef('methionine', 'Methionine', 'g', 1.1, NutrientGroup.aminoAcids),
+  NutrientDef('phenylalanine', 'Phenylalanine', 'g', 1.75, NutrientGroup.aminoAcids),
+  NutrientDef('threonine', 'Threonine', 'g', 1.05, NutrientGroup.aminoAcids),
+  NutrientDef('tryptophan', 'Tryptophan', 'g', 0.28, NutrientGroup.aminoAcids),
+  NutrientDef('valine', 'Valine', 'g', 1.8, NutrientGroup.aminoAcids),
 
   // --- Fats (breakdown of the Fat total) ---
   NutrientDef('saturatedFat', 'Saturated Fat', 'g', 20, NutrientGroup.fats),
-  NutrientDef('transFat', 'Trans Fat', 'g', null, NutrientGroup.fats),
-  NutrientDef('monounsaturatedFat', 'Monounsaturated Fat', 'g', null, NutrientGroup.fats),
-  NutrientDef('polyunsaturatedFat', 'Polyunsaturated Fat', 'g', null, NutrientGroup.fats),
+  NutrientDef('transFat', 'Trans Fat', 'g', 2, NutrientGroup.fats),
+  NutrientDef('monounsaturatedFat', 'Monounsaturated Fat', 'g', 44, NutrientGroup.fats),
+  NutrientDef('polyunsaturatedFat', 'Polyunsaturated Fat', 'g', 22, NutrientGroup.fats),
   NutrientDef('cholesterol', 'Cholesterol', 'mg', 300, NutrientGroup.fats),
-  NutrientDef('omega3', 'Omega-3', 'g', null, NutrientGroup.fats),
-  NutrientDef('omega6', 'Omega-6', 'g', null, NutrientGroup.fats),
-  NutrientDef('dha', 'DHA', 'mg', null, NutrientGroup.fats),
-  NutrientDef('epa', 'EPA', 'mg', null, NutrientGroup.fats),
+  NutrientDef('omega3', 'Omega-3', 'g', 1.6, NutrientGroup.fats),
+  NutrientDef('omega6', 'Omega-6', 'g', 17, NutrientGroup.fats),
+  NutrientDef('dha', 'DHA', 'mg', 250, NutrientGroup.fats),
+  NutrientDef('epa', 'EPA', 'mg', 250, NutrientGroup.fats),
 
   // --- Other useful info ---
   NutrientDef('fiber', 'Dietary Fiber', 'g', 28, NutrientGroup.other),
@@ -68,6 +83,7 @@ const List<NutrientDef> nutrientCatalog = [
 const Map<NutrientGroup, String> nutrientGroupLabels = {
   NutrientGroup.vitamins: 'VITAMINS',
   NutrientGroup.minerals: 'MINERALS',
+  NutrientGroup.aminoAcids: 'AMINO ACIDS',
   NutrientGroup.fats: 'FATS',
   NutrientGroup.other: 'OTHER',
 };

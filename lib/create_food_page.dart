@@ -481,6 +481,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
             if (_showMoreNutrients) ...[
               _nutrientSection(NutrientGroup.vitamins, Icons.wb_sunny_outlined),
               _nutrientSection(NutrientGroup.minerals, Icons.diamond_outlined),
+              _nutrientSection(NutrientGroup.aminoAcids, Icons.hexagon_outlined),
               _nutrientSection(NutrientGroup.fats, Icons.opacity_outlined),
               _nutrientSection(NutrientGroup.other, Icons.info_outline),
             ],
