@@ -20,6 +20,14 @@ class CustomFood {
   /// food's values have since been edited.
   final String? barcode;
 
+  /// Macro values as originally pulled from USDA, if [source] is 'usda'.
+  /// Kept untouched across edits so "Revert to USDA Data" always has
+  /// something to go back to, even after the visible values are changed.
+  final double? originalProteinG;
+  final double? originalCarbsG;
+  final double? originalFatG;
+  final double? originalKcal;
+
   const CustomFood({
     required this.id,
     required this.name,
@@ -32,6 +40,10 @@ class CustomFood {
     required this.isFavorite,
     this.nutrients = const {},
     this.barcode,
+    this.originalProteinG,
+    this.originalCarbsG,
+    this.originalFatG,
+    this.originalKcal,
   });
 
   Map<String, dynamic> toJson() => {
@@ -46,6 +58,10 @@ class CustomFood {
     'isFavorite': isFavorite,
     'nutrients': nutrients,
     'barcode': barcode,
+    'originalProteinG': originalProteinG,
+    'originalCarbsG': originalCarbsG,
+    'originalFatG': originalFatG,
+    'originalKcal': originalKcal,
   };
 
   factory CustomFood.fromJson(Map<String, dynamic> json) {
@@ -64,6 +80,10 @@ class CustomFood {
           ) ??
           const {},
       barcode: json['barcode'] as String?,
+      originalProteinG: (json['originalProteinG'] as num?)?.toDouble(),
+      originalCarbsG: (json['originalCarbsG'] as num?)?.toDouble(),
+      originalFatG: (json['originalFatG'] as num?)?.toDouble(),
+      originalKcal: (json['originalKcal'] as num?)?.toDouble(),
     );
   }
 }

@@ -9,22 +9,25 @@ class UserTargets {
   final double proteinG;
   final double carbsG;
   final double fatG;
+  final double stepsGoal;
 
   const UserTargets({
     required this.calories,
     required this.proteinG,
     required this.carbsG,
     required this.fatG,
+    this.stepsGoal = 10000,
   });
 
-  static const defaults = UserTargets(calories: 2500, proteinG: 180, carbsG: 280, fatG: 80);
+  static const defaults = UserTargets(calories: 2500, proteinG: 180, carbsG: 280, fatG: 80, stepsGoal: 10000);
 
-  UserTargets copyWith({double? calories, double? proteinG, double? carbsG, double? fatG}) {
+  UserTargets copyWith({double? calories, double? proteinG, double? carbsG, double? fatG, double? stepsGoal}) {
     return UserTargets(
       calories: calories ?? this.calories,
       proteinG: proteinG ?? this.proteinG,
       carbsG: carbsG ?? this.carbsG,
       fatG: fatG ?? this.fatG,
+      stepsGoal: stepsGoal ?? this.stepsGoal,
     );
   }
 
@@ -33,6 +36,7 @@ class UserTargets {
     'proteinG': proteinG,
     'carbsG': carbsG,
     'fatG': fatG,
+    'stepsGoal': stepsGoal,
   };
 
   factory UserTargets.fromJson(Map<String, dynamic> json) {
@@ -41,6 +45,7 @@ class UserTargets {
       proteinG: (json['proteinG'] as num).toDouble(),
       carbsG: (json['carbsG'] as num).toDouble(),
       fatG: (json['fatG'] as num).toDouble(),
+      stepsGoal: (json['stepsGoal'] as num?)?.toDouble() ?? 10000,
     );
   }
 }

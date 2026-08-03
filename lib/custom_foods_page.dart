@@ -84,6 +84,25 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
       if (confirmed != true || !mounted) return;
     }
 
+    if (food.source == 'usda') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Edit USDA food?'),
+          content: Text(
+            '"${food.name}" came from the USDA database. Editing it will change the saved values away '
+            'from the USDA data. If you want the original data back later, open it for editing again and '
+            'use "Revert to USDA Data".',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Edit Anyway')),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
     final updated = await Navigator.push<CustomFood>(
       context,
       MaterialPageRoute(builder: (context) => CreateFoodPage(existing: food)),

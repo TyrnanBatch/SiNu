@@ -14,6 +14,7 @@ class AppColors {
   static const carbs = Color(0xFFF5B942);
   static const fat = Color(0xFF4FA8F0);
   static const meal = Color(0xFFE05A5A);
+  static const steps = Color(0xFF9B8CE0);
 
   static const textPrimary = Colors.white;
   static const textSecondary = Colors.white70;

@@ -175,20 +175,6 @@ class _HomePageState extends State<HomePage> with RouteAware {
   Future<void> _addFoodToMeal(MealData meal) async {
     if (_loadingFoods) return;
 
-    if (_customFoods.isEmpty) {
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('No custom foods yet'),
-          content: const Text('Create one from the Add Food page first.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
-          ],
-        ),
-      );
-      return;
-    }
-
     final item = await Navigator.push<LoggedItem>(
       context,
       MaterialPageRoute(builder: (context) => AddFoodPage(foods: _customFoods)),

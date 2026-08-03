@@ -2,19 +2,6 @@ import 'user_targets.dart';
 
 enum BiologicalSex { male, female }
 
-enum ActivityLevel {
-  sedentary(1.2, 'Sedentary', 'Little or no exercise'),
-  light(1.375, 'Light', 'Exercise 1-3 days/week'),
-  moderate(1.55, 'Moderate', 'Exercise 3-5 days/week'),
-  active(1.725, 'Active', 'Exercise 6-7 days/week'),
-  veryActive(1.9, 'Very Active', 'Hard exercise + physical job');
-
-  final double multiplier;
-  final String label;
-  final String description;
-  const ActivityLevel(this.multiplier, this.label, this.description);
-}
-
 enum FitnessGoal {
   mildIncrease(250, 'Mild Weight Increase', '+250 kcal/day surplus'),
   maintain(0, 'Maintain', 'Stay at current weight'),
@@ -33,7 +20,7 @@ class RecommendationInput {
   final double heightCm;
   final double weightKg;
   final int age;
-  final ActivityLevel activity;
+  final int dailySteps;
   final FitnessGoal goal;
 
   const RecommendationInput({
@@ -41,19 +28,26 @@ class RecommendationInput {
     required this.heightCm,
     required this.weightKg,
     required this.age,
-    required this.activity,
+    required this.dailySteps,
     required this.goal,
   });
 }
 
-/// Mifflin-St Jeor BMR, scaled by activity level, adjusted for goal, then
-/// split into macros: 0.7g fat/kg bodyweight, 0.8g protein/lb bodyweight,
-/// remaining calories filled with carbs.
+/// Calories burned walking per step, scaled by bodyweight — roughly 0.04
+/// kcal/step for a 70kg adult (~3.5 MET walking pace, ~0.75m stride),
+/// extrapolated linearly from there.
+const _kcalPerStepPerKg = 0.04 / 70;
+
+/// Mifflin-St Jeor BMR, scaled by a flat non-exercise-activity multiplier
+/// plus estimated calories burned walking (from daily steps), adjusted for
+/// goal, then split into macros: 0.7g fat/kg bodyweight, 0.8g protein/lb
+/// bodyweight, remaining calories filled with carbs.
 UserTargets computeRecommendation(RecommendationInput input) {
   final bmr = input.sex == BiologicalSex.male
       ? 10 * input.weightKg + 6.25 * input.heightCm - 5 * input.age + 5
       : 10 * input.weightKg + 6.25 * input.heightCm - 5 * input.age - 161;
-  final tdee = bmr * input.activity.multiplier;
+  final walkingKcal = input.dailySteps * input.weightKg * _kcalPerStepPerKg;
+  final tdee = bmr * 1.2 + walkingKcal;
   final calories = (tdee + input.goal.calorieAdjustment).clamp(1200, 6000).toDouble();
 
   final weightLb = input.weightKg * 2.2046226218;

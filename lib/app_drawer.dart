@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'custom_foods_page.dart';
 import 'nutrition_page.dart';
 import 'theme.dart';
+import 'trends_page.dart';
 
 /// Top-level sections reachable from the side drawer. Used both to know
 /// which route to push and to highlight the current one in the drawer.
-enum AppSection { today, customFoods, nutrition, settings, profile }
+enum AppSection { today, customFoods, nutrition, trends, settings, profile }
 
 /// Modern fold-out side nav, replacing the old bottom tab bar. Present on
 /// every top-level page. Selecting a section always collapses the stack
@@ -30,6 +31,8 @@ class AppDrawer extends StatelessWidget {
         navigator.push(MaterialPageRoute(builder: (_) => const CustomFoodsPage()));
       case AppSection.nutrition:
         navigator.push(MaterialPageRoute(builder: (_) => const NutritionPage()));
+      case AppSection.trends:
+        navigator.push(MaterialPageRoute(builder: (_) => const TrendsPage()));
       case AppSection.settings:
         navigator.push(
           MaterialPageRoute(
@@ -96,9 +99,15 @@ class AppDrawer extends StatelessWidget {
               ),
               _DrawerItem(
                 icon: Icons.pie_chart_outline_rounded,
-                label: 'Nutrition',
+                label: 'Nutrition & Steps',
                 active: current == AppSection.nutrition,
                 onTap: () => _go(context, AppSection.nutrition),
+              ),
+              _DrawerItem(
+                icon: Icons.show_chart_rounded,
+                label: 'Trends',
+                active: current == AppSection.trends,
+                onTap: () => _go(context, AppSection.trends),
               ),
               const Spacer(),
               const Divider(color: AppColors.border, height: 24),

@@ -37,6 +37,10 @@ class CustomFoodsStore {
     required double kcal,
     Map<String, double> nutrients = const {},
     String? barcode,
+    double? originalProteinG,
+    double? originalCarbsG,
+    double? originalFatG,
+    double? originalKcal,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final foods = await loadAll();
@@ -54,6 +58,10 @@ class CustomFoodsStore {
       isFavorite: false,
       nutrients: nutrients,
       barcode: barcode,
+      originalProteinG: originalProteinG,
+      originalCarbsG: originalCarbsG,
+      originalFatG: originalFatG,
+      originalKcal: originalKcal,
     );
     foods.add(food);
     await _saveAll(prefs, foods);
@@ -91,6 +99,10 @@ class CustomFoodsStore {
       isFavorite: isFavorite ?? existing.isFavorite,
       nutrients: nutrients ?? existing.nutrients,
       barcode: barcode ?? existing.barcode,
+      originalProteinG: existing.originalProteinG,
+      originalCarbsG: existing.originalCarbsG,
+      originalFatG: existing.originalFatG,
+      originalKcal: existing.originalKcal,
     );
     foods[index] = updated;
     await _saveAll(prefs, foods);

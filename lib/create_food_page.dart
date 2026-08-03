@@ -70,6 +70,21 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
 
   void _onValueChanged() => setState(() {});
 
+  bool get _canRevertToUsda {
+    final food = widget.existing;
+    return food != null && food.source == 'usda' && food.originalKcal != null;
+  }
+
+  void _revertToUsda() {
+    final food = widget.existing!;
+    setState(() {
+      _proteinController.text = _fmt(food.originalProteinG!);
+      _carbsController.text = _fmt(food.originalCarbsG!);
+      _fatController.text = _fmt(food.originalFatG!);
+      _kcalController.text = _fmt(food.originalKcal!);
+    });
+  }
+
   String _fmt(double n) => n == n.roundToDouble() ? n.round().toString() : n.toString();
 
   double _read(TextEditingController controller) => double.tryParse(controller.text) ?? 0;
@@ -270,6 +285,55 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
     );
   }
 
+  static const _nutrientNumberStyle = TextStyle(fontSize: 12);
+
+  InputDecoration _nutrientFieldDecoration(String label, {String? suffixText}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+      suffixText: suffixText,
+      suffixStyle: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(vertical: 3),
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+    );
+  }
+
+  Widget _nutrientPercentBar(double value, double target) {
+    final pct = target <= 0 ? 0.0 : (value / target).clamp(0, 1).toDouble();
+    final rawPct = target <= 0 ? 0 : (value / target * 100).round();
+    final pctLabel = '${rawPct > 999 ? 999 : rawPct}%';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: pct,
+                minHeight: 3,
+                backgroundColor: Colors.white12,
+                valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 28,
+            child: Text(
+              pctLabel,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _nutrientFieldWithBar(NutrientDef def) {
     final controller = _nutrientControllers[def.key]!;
     final rdi = def.rdi;
@@ -281,13 +345,13 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
           TextFormField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: _numberStyle,
-            decoration: _fieldDecoration(
+            style: _nutrientNumberStyle,
+            decoration: _nutrientFieldDecoration(
               def.label,
               suffixText: rdi != null ? '/${_fmt(rdi)}${def.unit}' : def.unit,
             ),
           ),
-          if (rdi != null) _percentBar(_read(controller), rdi, AppColors.accent),
+          if (rdi != null) _nutrientPercentBar(_read(controller), rdi),
         ],
       ),
     );
@@ -296,7 +360,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
   Widget _nutrientSection(NutrientGroup group, IconData icon) {
     final defs = nutrientCatalog.where((d) => d.group == group).toList();
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -339,6 +403,20 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
               ),
             ]),
             const SizedBox(height: 16),
+            if (_canRevertToUsda)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _revertToUsda,
+                  icon: const Icon(Icons.restore, size: 16),
+                  label: const Text('Revert to USDA Data'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accent,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
             _sectionLabel(Icons.pie_chart_outline_rounded, 'MACROS FOR THAT PORTION'),
             _card([
               _macroFieldWithBar(

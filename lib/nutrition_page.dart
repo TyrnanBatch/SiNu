@@ -20,6 +20,7 @@ class _NutritionPageState extends State<NutritionPage> {
   late final TextEditingController _proteinController;
   late final TextEditingController _carbsController;
   late final TextEditingController _fatController;
+  late final TextEditingController _stepsController;
 
   bool _loading = true;
   bool _saving = false;
@@ -31,6 +32,7 @@ class _NutritionPageState extends State<NutritionPage> {
     _proteinController = TextEditingController()..addListener(_onChanged);
     _carbsController = TextEditingController()..addListener(_onChanged);
     _fatController = TextEditingController()..addListener(_onChanged);
+    _stepsController = TextEditingController()..addListener(_onChanged);
     _load();
   }
 
@@ -40,6 +42,7 @@ class _NutritionPageState extends State<NutritionPage> {
     final targets = await _store.load();
     if (!mounted) return;
     _applyTargets(targets);
+    _stepsController.text = _fmt(targets.stepsGoal);
     setState(() => _loading = false);
   }
 
@@ -60,6 +63,7 @@ class _NutritionPageState extends State<NutritionPage> {
     _proteinController.dispose();
     _carbsController.dispose();
     _fatController.dispose();
+    _stepsController.dispose();
     super.dispose();
   }
 
@@ -71,12 +75,13 @@ class _NutritionPageState extends State<NutritionPage> {
         proteinG: _read(_proteinController),
         carbsG: _read(_carbsController),
         fatG: _read(_fatController),
+        stepsGoal: _read(_stepsController),
       ),
     );
     if (!mounted) return;
     setState(() => _saving = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Nutrition targets saved')),
+      const SnackBar(content: Text('Targets saved')),
     );
   }
 
@@ -88,10 +93,11 @@ class _NutritionPageState extends State<NutritionPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => const _RecommendationSheet(),
+      builder: (context) => _RecommendationSheet(initialSteps: _read(_stepsController).round()),
     );
     if (result == null || !mounted) return;
     _applyTargets(computeRecommendation(result));
+    _stepsController.text = _fmt(result.dailySteps.toDouble());
     setState(() {});
   }
 
@@ -143,7 +149,7 @@ class _NutritionPageState extends State<NutritionPage> {
     final fat = _read(_fatController);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nutrition')),
+      appBar: AppBar(title: const Text('Nutrition & Steps')),
       drawer: const AppDrawer(current: AppSection.nutrition),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -174,6 +180,18 @@ class _NutritionPageState extends State<NutritionPage> {
                     controller: _fatController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: _fieldDecoration('Fat', prefixIcon: _dot(AppColors.fat), suffixText: 'g'),
+                  ),
+                ]),
+                const SizedBox(height: 16),
+                _card([
+                  TextFormField(
+                    controller: _stepsController,
+                    keyboardType: TextInputType.number,
+                    decoration: _fieldDecoration(
+                      'Daily Steps Goal',
+                      prefixIcon: const Icon(Icons.directions_walk, color: AppColors.steps, size: 20),
+                      suffixText: 'steps',
+                    ),
                   ),
                 ]),
                 const SizedBox(height: 16),
@@ -372,7 +390,9 @@ class _MacroRingPainter extends CustomPainter {
 }
 
 class _RecommendationSheet extends StatefulWidget {
-  const _RecommendationSheet();
+  final int initialSteps;
+
+  const _RecommendationSheet({required this.initialSteps});
 
   @override
   State<_RecommendationSheet> createState() => _RecommendationSheetState();
@@ -383,8 +403,8 @@ class _RecommendationSheetState extends State<_RecommendationSheet> {
   final _heightController = TextEditingController();
   final _weightController = TextEditingController();
   final _ageController = TextEditingController();
+  late final _stepsController = TextEditingController(text: '${widget.initialSteps}');
   BiologicalSex _sex = BiologicalSex.male;
-  ActivityLevel _activity = ActivityLevel.moderate;
   FitnessGoal _goal = FitnessGoal.maintain;
 
   @override
@@ -392,6 +412,7 @@ class _RecommendationSheetState extends State<_RecommendationSheet> {
     _heightController.dispose();
     _weightController.dispose();
     _ageController.dispose();
+    _stepsController.dispose();
     super.dispose();
   }
 
@@ -399,6 +420,13 @@ class _RecommendationSheetState extends State<_RecommendationSheet> {
     if (value == null || value.isEmpty) return 'Required';
     final n = double.tryParse(value);
     if (n == null || n <= 0) return 'Enter a valid number';
+    return null;
+  }
+
+  String? _requiredSteps(String? value) {
+    if (value == null || value.isEmpty) return 'Required';
+    final n = int.tryParse(value);
+    if (n == null || n < 0) return 'Enter a valid number';
     return null;
   }
 
@@ -411,7 +439,7 @@ class _RecommendationSheetState extends State<_RecommendationSheet> {
         heightCm: double.parse(_heightController.text),
         weightKg: double.parse(_weightController.text),
         age: int.parse(_ageController.text),
-        activity: _activity,
+        dailySteps: int.parse(_stepsController.text),
         goal: _goal,
       ),
     );
@@ -463,27 +491,16 @@ class _RecommendationSheetState extends State<_RecommendationSheet> {
                 decoration: const InputDecoration(labelText: 'Age', suffixText: 'years', border: OutlineInputBorder()),
                 validator: _requiredNumber,
               ),
-              const SizedBox(height: 16),
-              const Text('Activity Level', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<ActivityLevel>(
-                initialValue: _activity,
-                isExpanded: true,
-                decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
-                items: ActivityLevel.values
-                    .map(
-                      (a) => DropdownMenuItem(
-                        value: a,
-                        child: Text(
-                          '${a.label} — ${a.description}',
-                          style: const TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _activity = v!),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _stepsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Average Daily Steps',
+                  suffixText: 'steps',
+                  border: OutlineInputBorder(),
+                ),
+                validator: _requiredSteps,
               ),
               const SizedBox(height: 16),
               const Text('Goal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),

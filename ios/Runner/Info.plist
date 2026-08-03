@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>SiNu uses the camera to scan food barcodes.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>SiNu reads your step count from Apple Health to show it in Trends.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>SiNu reads your step count from Apple Health to show it in Trends.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
