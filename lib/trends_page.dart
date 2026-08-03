@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'app_drawer.dart';
 import 'health_service.dart';
 import 'models.dart';
+import 'nutrient_gaps_page.dart';
 import 'storage.dart';
 import 'theme.dart';
 import 'user_targets.dart';
@@ -235,6 +236,21 @@ class _TrendsPageState extends State<TrendsPage> {
                   const SizedBox(height: 24),
                   _sectionLabel(Icons.monitor_weight_outlined, 'WEIGHT'),
                   _card(_buildWeightSection()),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NutrientGapsPage()),
+                    ),
+                    icon: const Icon(Icons.science_outlined, size: 18),
+                    label: const Text('View Nutrient Gaps'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accent,
+                      side: const BorderSide(color: AppColors.accent),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
                 ],
               ),
             ),
