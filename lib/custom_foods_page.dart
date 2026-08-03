@@ -6,6 +6,8 @@ import 'barcode_scan_page.dart';
 import 'create_food_page.dart';
 import 'custom_foods_store.dart';
 import 'food_avatar.dart';
+import 'meal_template_page.dart';
+import 'meal_templates_store.dart';
 import 'models.dart';
 import 'theme.dart';
 
@@ -18,15 +20,18 @@ class CustomFoodsPage extends StatefulWidget {
 
 class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProviderStateMixin {
   final CustomFoodsStore _store = CustomFoodsStore();
+  final MealTemplatesStore _templatesStore = MealTemplatesStore();
   late final TabController _tabController;
   List<CustomFood> _foods = [];
+  List<MealTemplate> _templates = [];
   bool _loading = true;
   String? _error;
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _load();
   }
 
@@ -43,8 +48,10 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
     });
     try {
       final foods = await _store.loadAll();
+      final templates = await _templatesStore.loadAll();
       setState(() {
         _foods = foods;
+        _templates = templates;
         _loading = false;
       });
     } catch (e) {
@@ -161,6 +168,68 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
     }
   }
 
+  Future<void> _createTemplate() async {
+    final template = await Navigator.push<MealTemplate>(
+      context,
+      MaterialPageRoute(builder: (context) => const MealTemplatePage()),
+    );
+    if (template == null || !mounted) return;
+    setState(() => _templates.add(template));
+  }
+
+  Future<void> _editTemplate(MealTemplate template) async {
+    final updated = await Navigator.push<MealTemplate>(
+      context,
+      MaterialPageRoute(builder: (context) => MealTemplatePage(existing: template)),
+    );
+    if (updated == null || !mounted) return;
+    setState(() {
+      final index = _templates.indexWhere((t) => t.id == updated.id);
+      if (index != -1) _templates[index] = updated;
+    });
+  }
+
+  Future<void> _deleteTemplate(MealTemplate template) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete meal template?'),
+        content: Text('This removes "${template.name}" from your saved meals.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _templatesStore.delete(template.id);
+      if (!mounted) return;
+      setState(() => _templates.removeWhere((t) => t.id == template.id));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete meal template')),
+      );
+    }
+  }
+
+  List<CustomFood> _matchingFoods(Iterable<CustomFood> foods) {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return foods.toList();
+    return foods.where((f) => f.name.toLowerCase().contains(q)).toList();
+  }
+
+  List<MealTemplate> _matchingTemplates(Iterable<MealTemplate> templates) {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return templates.toList();
+    return templates.where((t) => t.name.toLowerCase().contains(q)).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -175,6 +244,7 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
             Tab(text: 'All'),
             Tab(text: 'Favourites'),
             Tab(text: 'Scanned'),
+            Tab(text: 'Meals'),
           ],
         ),
       ),
@@ -193,16 +263,48 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
                 Expanded(
                   child: ActionTile(icon: Icons.add, label: 'Create Food', onTap: _create),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ActionTile(icon: Icons.restaurant_menu, label: 'New Meal', onTap: _createTemplate),
+                ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search, size: 20, color: Colors.white54),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      onChanged: (v) => setState(() => _query = v),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Search foods and meals...',
+                        hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildBody(_foods, 'No custom foods yet'),
-                  _buildBody(_foods.where((f) => f.isFavorite).toList(), 'No favourites yet'),
-                  _buildBody(_foods.where((f) => f.source == 'scanned').toList(), 'No scanned foods yet'),
+                  _buildBody(_matchingFoods(_foods), 'No custom foods yet'),
+                  _buildBody(_matchingFoods(_foods.where((f) => f.isFavorite)), 'No favourites yet'),
+                  _buildBody(_matchingFoods(_foods.where((f) => f.source == 'scanned')), 'No scanned foods yet'),
+                  _buildTemplatesBody(),
                 ],
               ),
             ),
@@ -230,7 +332,10 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
     }
     if (foods.isEmpty) {
       return Center(
-        child: Text(emptyMessage, style: const TextStyle(color: Colors.white38)),
+        child: Text(
+          _query.trim().isEmpty ? emptyMessage : 'No matches for "${_query.trim()}"',
+          style: const TextStyle(color: Colors.white38),
+        ),
       );
     }
     return ListView.separated(
@@ -243,6 +348,45 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
           onToggleFavorite: () => _toggleFavorite(food),
           onEdit: () => _edit(food),
           onDelete: () => _delete(food),
+        );
+      },
+    );
+  }
+
+  Widget _buildTemplatesBody() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_error!, style: const TextStyle(color: Colors.white54)),
+            const SizedBox(height: 12),
+            OutlinedButton(onPressed: _load, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+    final templates = _matchingTemplates(_templates);
+    if (templates.isEmpty) {
+      return Center(
+        child: Text(
+          _query.trim().isEmpty ? 'No saved meals yet' : 'No matches for "${_query.trim()}"',
+          style: const TextStyle(color: Colors.white38),
+        ),
+      );
+    }
+    return ListView.separated(
+      itemCount: templates.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final template = templates[index];
+        return MealTemplateTile(
+          template: template,
+          onEdit: () => _editTemplate(template),
+          onDelete: () => _deleteTemplate(template),
         );
       },
     );
@@ -307,6 +451,58 @@ class CustomFoodTile extends StatelessWidget {
                 Text(
                   '${food.kcal.round()} kcal / ${food.portionGrams.round()} · '
                   '${food.proteinG.round()}g P  ${food.carbsG.round()}g C  ${food.fatG.round()}g F',
+                  style: const TextStyle(fontSize: 12, color: Colors.white54),
+                ),
+              ],
+            ),
+          ),
+          IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: onEdit),
+          IconButton(icon: const Icon(Icons.delete_outline, size: 20), onPressed: onDelete),
+        ],
+      ),
+    );
+  }
+}
+
+class MealTemplateTile extends StatelessWidget {
+  final MealTemplate template;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const MealTemplateTile({
+    super.key,
+    required this.template,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.meal,
+            child: Icon(Icons.restaurant_menu, size: 18, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(template.name, style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                Text(
+                  '${template.items.length} item${template.items.length == 1 ? '' : 's'} · '
+                  '${template.kcalTotal.round()} kcal · '
+                  '${template.proteinTotal.round()}g P  ${template.carbsTotal.round()}g C  ${template.fatTotal.round()}g F',
                   style: const TextStyle(fontSize: 12, color: Colors.white54),
                 ),
               ],

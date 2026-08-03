@@ -21,6 +21,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _portionController;
+  late final TextEditingController _defaultPortionController;
   late final TextEditingController _proteinController;
   late final TextEditingController _carbsController;
   late final TextEditingController _fatController;
@@ -44,6 +45,9 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
     final prefill = widget.existing;
     _nameController = TextEditingController(text: prefill?.name ?? '');
     _portionController = TextEditingController(text: (prefill?.portionGrams ?? 100).round().toString());
+    _defaultPortionController = TextEditingController(
+      text: prefill?.defaultPortionGrams != null ? _fmt(prefill!.defaultPortionGrams!) : '',
+    );
     _proteinController = TextEditingController(text: prefill != null ? _fmt(prefill.proteinG) : '');
     _carbsController = TextEditingController(text: prefill != null ? _fmt(prefill.carbsG) : '');
     _fatController = TextEditingController(text: prefill != null ? _fmt(prefill.fatG) : '');
@@ -66,9 +70,42 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
     ]) {
       controller.addListener(_onValueChanged);
     }
+
+    // Existing food already has an explicit kcal value someone chose —
+    // don't silently overwrite it just because they open it for editing.
+    _kcalManuallyEdited = prefill != null;
+    _proteinController.addListener(_maybeAutoFillKcal);
+    _carbsController.addListener(_maybeAutoFillKcal);
+    _fatController.addListener(_maybeAutoFillKcal);
+    _kcalController.addListener(_markKcalManuallyEdited);
   }
 
   void _onValueChanged() => setState(() {});
+
+  bool _kcalManuallyEdited = false;
+  bool _settingKcalProgrammatically = false;
+
+  void _markKcalManuallyEdited() {
+    if (_settingKcalProgrammatically) return;
+    _kcalManuallyEdited = true;
+  }
+
+  /// Fills in calories from protein/carbs/fat (4/4/9 kcal per gram) once all
+  /// three are valid numbers — unless the user has typed their own kcal
+  /// value, in which case their number wins until they clear it.
+  void _maybeAutoFillKcal() {
+    if (_kcalController.text.trim().isEmpty) _kcalManuallyEdited = false;
+    if (_kcalManuallyEdited) return;
+
+    final protein = double.tryParse(_proteinController.text);
+    final carbs = double.tryParse(_carbsController.text);
+    final fat = double.tryParse(_fatController.text);
+    if (protein == null || carbs == null || fat == null) return;
+
+    _settingKcalProgrammatically = true;
+    _kcalController.text = _fmt(protein * 4 + carbs * 4 + fat * 9);
+    _settingKcalProgrammatically = false;
+  }
 
   bool get _canRevertToUsda {
     final food = widget.existing;
@@ -93,6 +130,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
   void dispose() {
     _nameController.dispose();
     _portionController.dispose();
+    _defaultPortionController.dispose();
     _proteinController.dispose();
     _carbsController.dispose();
     _fatController.dispose();
@@ -110,6 +148,13 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
     return null;
   }
 
+  String? _optionalPositiveNumber(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final n = double.tryParse(value);
+    if (n == null || n <= 0) return 'Enter a valid number';
+    return null;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -121,6 +166,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
     final nutrients = {
       for (final def in nutrientCatalog) def.key: _read(_nutrientControllers[def.key]!),
     };
+    final defaultPortionGrams = double.tryParse(_defaultPortionController.text);
 
     try {
       final CustomFood food;
@@ -135,6 +181,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
           fatG: double.parse(_fatController.text),
           kcal: double.parse(_kcalController.text),
           nutrients: nutrients,
+          defaultPortionGrams: defaultPortionGrams,
         );
       } else {
         food = await store.create(
@@ -146,6 +193,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
           fatG: double.parse(_fatController.text),
           kcal: double.parse(_kcalController.text),
           nutrients: nutrients,
+          defaultPortionGrams: defaultPortionGrams,
         );
       }
       if (!mounted) return;
@@ -401,7 +449,25 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
                 ),
                 validator: _requiredNumber,
               ),
+              TextFormField(
+                controller: _defaultPortionController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: _numberStyle,
+                decoration: _fieldDecoration(
+                  'Default portion (optional)',
+                  prefixIcon: const Icon(Icons.local_dining_outlined, size: 18, color: AppColors.textMuted),
+                  suffixText: 'g',
+                ),
+                validator: _optionalPositiveNumber,
+              ),
             ]),
+            const Padding(
+              padding: EdgeInsets.only(left: 4, top: 4),
+              child: Text(
+                'e.g. "1 slice = 30g" — lets you log this food by number of portions instead of grams.',
+                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+              ),
+            ),
             const SizedBox(height: 16),
             if (_canRevertToUsda)
               Align(

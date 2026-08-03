@@ -8,6 +8,7 @@ import 'amount_sheet.dart';
 import 'app_drawer.dart';
 import 'custom_foods_store.dart';
 import 'food_avatar.dart';
+import 'meal_templates_store.dart';
 import 'models.dart';
 import 'storage.dart';
 import 'theme.dart';
@@ -71,6 +72,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with RouteAware {
   final CustomFoodsStore _foodsStore = CustomFoodsStore();
+  final MealTemplatesStore _templatesStore = MealTemplatesStore();
   final MealsStorage _storage = MealsStorage();
   final UserTargetsStore _targetsStore = UserTargetsStore();
   late final DateTime _todayDate;
@@ -172,6 +174,80 @@ class _HomePageState extends State<HomePage> with RouteAware {
     _persistMeals();
   }
 
+  Future<void> _saveMealAsTemplate(MealData meal) async {
+    if (meal.items.isEmpty) return;
+    final controller = TextEditingController(text: 'Meal ${meal.number}');
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save as Meal Template'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+
+    await _templatesStore.create(name: name, items: meal.items.map((i) => i.copy()).toList());
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved "$name" as a meal template')));
+  }
+
+  Future<void> _addMealFromTemplate() async {
+    final templates = await _templatesStore.loadAll();
+    if (!mounted) return;
+    if (templates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No saved meals yet — save one from a meal\'s menu, or add one in Custom Foods > Meals')),
+      );
+      return;
+    }
+
+    final chosen = await showModalBottomSheet<MealTemplate>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Text('Add Meal from Template', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            for (final template in templates)
+              ListTile(
+                leading: const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AppColors.meal,
+                  child: Icon(Icons.restaurant_menu, size: 16, color: Colors.white),
+                ),
+                title: Text(template.name),
+                subtitle: Text('${template.items.length} item${template.items.length == 1 ? '' : 's'} · ${template.kcalTotal.round()} kcal'),
+                onTap: () => Navigator.pop(context, template),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+
+    setState(() {
+      _meals.add(MealData(number: _meals.length + 1, items: chosen.items.map((i) => i.copy()).toList()));
+    });
+    _persistMeals();
+  }
+
   Future<void> _addFoodToMeal(MealData meal) async {
     if (_loadingFoods) return;
 
@@ -187,11 +263,19 @@ class _HomePageState extends State<HomePage> with RouteAware {
   }
 
   Future<void> _editItemAmount(LoggedItem item) async {
+    CustomFood? food;
+    for (final f in _customFoods) {
+      if (f.id == item.foodId) {
+        food = f;
+        break;
+      }
+    }
     final grams = await AmountSheet.show(
       context,
       title: item.name,
       initialGrams: item.grams,
       submitLabel: 'Save',
+      defaultPortionGrams: food?.defaultPortionGrams,
     );
     if (grams == null) return;
     setState(() => item.grams = grams);
@@ -293,9 +377,28 @@ class _HomePageState extends State<HomePage> with RouteAware {
                 onEditItem: _editItemAmount,
                 onDeleteItem: (item) => _deleteItem(meal, item),
                 onDeleteMeal: () => _confirmDeleteMeal(meal),
+                onSaveTemplate: () => _saveMealAsTemplate(meal),
               ),
             ),
-            AddMealButton(onPressed: _addMeal),
+            Row(
+              children: [
+                Expanded(child: AddMealButton(onPressed: _addMeal)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _addMealFromTemplate,
+                    icon: const Icon(Icons.bookmark_outline),
+                    label: const Text('From Template'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accent,
+                      side: const BorderSide(color: AppColors.accent),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -617,6 +720,7 @@ class MealSection extends StatefulWidget {
   final ValueChanged<LoggedItem> onEditItem;
   final ValueChanged<LoggedItem> onDeleteItem;
   final VoidCallback onDeleteMeal;
+  final VoidCallback onSaveTemplate;
 
   const MealSection({
     super.key,
@@ -625,6 +729,7 @@ class MealSection extends StatefulWidget {
     required this.onEditItem,
     required this.onDeleteItem,
     required this.onDeleteMeal,
+    required this.onSaveTemplate,
   });
 
   @override
@@ -672,13 +777,18 @@ class _MealSectionState extends State<MealSection> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('${meal.kcalTotal.round()} kcal', style: const TextStyle(color: AppColors.textSecondary)),
-              const SizedBox(width: 6),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.white38),
+              const SizedBox(width: 2),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 18, color: Colors.white38),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                visualDensity: VisualDensity.compact,
-                onPressed: widget.onDeleteMeal,
+                onSelected: (value) {
+                  if (value == 'save') widget.onSaveTemplate();
+                  if (value == 'delete') widget.onDeleteMeal();
+                },
+                itemBuilder: (context) => [
+                  if (meal.items.isNotEmpty) const PopupMenuItem(value: 'save', child: Text('Save as Template')),
+                  const PopupMenuItem(value: 'delete', child: Text('Delete Meal')),
+                ],
               ),
               const SizedBox(width: 4),
               Icon(_expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),

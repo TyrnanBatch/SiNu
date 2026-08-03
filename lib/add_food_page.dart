@@ -115,7 +115,12 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
   }
 
   Future<void> _selectFood(CustomFood food) async {
-    final grams = await AmountSheet.show(context, title: food.name, initialGrams: food.portionGrams);
+    final grams = await AmountSheet.show(
+      context,
+      title: food.name,
+      initialGrams: food.portionGrams,
+      defaultPortionGrams: food.defaultPortionGrams,
+    );
     if (grams == null || !mounted) return;
     Navigator.pop(context, LoggedItem.fromCustomFood(food, grams));
   }

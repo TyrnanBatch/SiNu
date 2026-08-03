@@ -28,6 +28,12 @@ class CustomFood {
   final double? originalFatG;
   final double? originalKcal;
 
+  /// A convenient serving size for this food (e.g. "1 slice" = 30g), distinct
+  /// from [portionGrams] (the reference amount the macros above are for).
+  /// When set, logging this food offers a "portions" entry mode alongside
+  /// grams. Null means no default portion has been defined.
+  final double? defaultPortionGrams;
+
   const CustomFood({
     required this.id,
     required this.name,
@@ -44,6 +50,7 @@ class CustomFood {
     this.originalCarbsG,
     this.originalFatG,
     this.originalKcal,
+    this.defaultPortionGrams,
   });
 
   Map<String, dynamic> toJson() => {
@@ -62,6 +69,7 @@ class CustomFood {
     'originalCarbsG': originalCarbsG,
     'originalFatG': originalFatG,
     'originalKcal': originalKcal,
+    'defaultPortionGrams': defaultPortionGrams,
   };
 
   factory CustomFood.fromJson(Map<String, dynamic> json) {
@@ -84,6 +92,7 @@ class CustomFood {
       originalCarbsG: (json['originalCarbsG'] as num?)?.toDouble(),
       originalFatG: (json['originalFatG'] as num?)?.toDouble(),
       originalKcal: (json['originalKcal'] as num?)?.toDouble(),
+      defaultPortionGrams: (json['defaultPortionGrams'] as num?)?.toDouble(),
     );
   }
 }
@@ -168,6 +177,10 @@ class LoggedItem {
       kcalPerGram: (json['kcalPerGram'] as num).toDouble(),
     );
   }
+
+  /// Independent copy — editing the copy's grams/name never touches the
+  /// original, needed whenever items move between a meal and a template.
+  LoggedItem copy() => LoggedItem.fromJson(toJson());
 }
 
 class MealData {
@@ -189,6 +202,38 @@ class MealData {
   factory MealData.fromJson(Map<String, dynamic> json) {
     return MealData(
       number: json['number'] as int,
+      items: (json['items'] as List<dynamic>)
+          .map((e) => LoggedItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// A named, reusable set of food items — captured from a logged meal (or
+/// built from scratch) so the same combination can be added to a day again
+/// without re-picking every item.
+class MealTemplate {
+  final int id;
+  String name;
+  final List<LoggedItem> items;
+
+  MealTemplate({required this.id, required this.name, List<LoggedItem>? items}) : items = items ?? [];
+
+  double get kcalTotal => items.fold(0, (sum, i) => sum + i.kcal);
+  double get proteinTotal => items.fold(0, (sum, i) => sum + i.proteinG);
+  double get carbsTotal => items.fold(0, (sum, i) => sum + i.carbsG);
+  double get fatTotal => items.fold(0, (sum, i) => sum + i.fatG);
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'items': items.map((i) => i.toJson()).toList(),
+  };
+
+  factory MealTemplate.fromJson(Map<String, dynamic> json) {
+    return MealTemplate(
+      id: json['id'] as int,
+      name: json['name'] as String,
       items: (json['items'] as List<dynamic>)
           .map((e) => LoggedItem.fromJson(e as Map<String, dynamic>))
           .toList(),

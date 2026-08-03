@@ -4,6 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models.dart';
 
+/// Distinguishes "caller didn't pass this" (keep existing value) from
+/// "caller passed null" (clear it) for [CustomFoodsStore.update]'s
+/// defaultPortionGrams — a plain nullable default can't tell those apart.
+const Object _unset = Object();
+
 /// On-device custom foods library. No server involved — everything lives
 /// in SharedPreferences (real storage on mobile/desktop, localStorage on web).
 class CustomFoodsStore {
@@ -41,6 +46,7 @@ class CustomFoodsStore {
     double? originalCarbsG,
     double? originalFatG,
     double? originalKcal,
+    double? defaultPortionGrams,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final foods = await loadAll();
@@ -62,6 +68,7 @@ class CustomFoodsStore {
       originalCarbsG: originalCarbsG,
       originalFatG: originalFatG,
       originalKcal: originalKcal,
+      defaultPortionGrams: defaultPortionGrams,
     );
     foods.add(food);
     await _saveAll(prefs, foods);
@@ -80,6 +87,7 @@ class CustomFoodsStore {
     bool? isFavorite,
     Map<String, double>? nutrients,
     String? barcode,
+    Object? defaultPortionGrams = _unset,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final foods = await loadAll();
@@ -103,6 +111,7 @@ class CustomFoodsStore {
       originalCarbsG: existing.originalCarbsG,
       originalFatG: existing.originalFatG,
       originalKcal: existing.originalKcal,
+      defaultPortionGrams: identical(defaultPortionGrams, _unset) ? existing.defaultPortionGrams : defaultPortionGrams as double?,
     );
     foods[index] = updated;
     await _saveAll(prefs, foods);
