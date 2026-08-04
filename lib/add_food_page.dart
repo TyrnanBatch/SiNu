@@ -8,6 +8,7 @@ import 'create_food_page.dart';
 import 'custom_foods_store.dart';
 import 'food_avatar.dart';
 import 'models.dart';
+import 'storage.dart';
 import 'theme.dart';
 import 'usda_client.dart';
 
@@ -39,12 +40,44 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
   bool _usdaLoading = false;
   String? _usdaError;
 
+  List<CustomFood> _recentFoods = [];
+
   @override
   void initState() {
     super.initState();
     _foods = List.of(widget.foods);
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_onTabChanged);
+    _loadRecentFoods();
+  }
+
+  /// Most-recently-logged distinct foods, newest first — scans the last two
+  /// weeks of meal history since there's no separate "usage" tracking to
+  /// maintain just for this.
+  Future<void> _loadRecentFoods() async {
+    final storage = MealsStorage();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final foodsById = {for (final f in _foods) f.id: f};
+    final seen = <int>{};
+    final recent = <CustomFood>[];
+
+    for (var i = 0; i < 14 && recent.length < 8; i++) {
+      final meals = await storage.loadMeals(today.subtract(Duration(days: i)));
+      if (meals == null) continue;
+      for (final meal in meals.reversed) {
+        for (final item in meal.items.reversed) {
+          final food = item.foodId == null ? null : foodsById[item.foodId];
+          if (food == null || !seen.add(food.id)) continue;
+          recent.add(food);
+          if (recent.length >= 8) break;
+        }
+        if (recent.length >= 8) break;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _recentFoods = recent);
   }
 
   @override
@@ -349,6 +382,22 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
                 ),
               ],
             ),
+            if (_query.trim().isEmpty && _recentFoods.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _sectionLabel('RECENTLY LOGGED'),
+              SizedBox(
+                height: 44,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _recentFoods.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final food = _recentFoods[index];
+                    return RecentFoodChip(food: food, onTap: () => _selectFood(food));
+                  },
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Expanded(
               child: TabBarView(
@@ -399,6 +448,45 @@ class ActionTile extends StatelessWidget {
                 label,
                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.accent),
                 overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class RecentFoodChip extends StatelessWidget {
+  final CustomFood food;
+  final VoidCallback onTap;
+
+  const RecentFoodChip({super.key, required this.food, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.border)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.history, size: 14, color: AppColors.textMuted),
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Text(
+                  food.name,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
             ],
           ),
