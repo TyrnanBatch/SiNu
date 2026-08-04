@@ -14,8 +14,11 @@ class AppColors {
   static const carbs = Color(0xFFF5B942);
   static const fat = Color(0xFF4FA8F0);
   static const meal = Color(0xFFE05A5A);
-  static const steps = Color(0xFF9B8CE0);
-  static const weight = Color(0xFF4FD1C5);
+  // Deliberately desaturated relative to accent/protein/carbs/fat — these
+  // are secondary metrics on Trends and shouldn't compete for attention
+  // with calories/macros when all sections are visible in one scroll.
+  static const steps = Color(0xFF8B93A6);
+  static const weight = Color(0xFF6B9B96);
 
   static const textPrimary = Colors.white;
   static const textSecondary = Colors.white70;
