@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'custom_foods_store.dart';
 import 'nutrients.dart';
+import 'rdi_overrides_store.dart';
 import 'storage.dart';
 import 'theme.dart';
 
@@ -25,11 +26,16 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
 
   Map<String, double> _avgIntake = {};
   Set<String> _trackedKeys = {};
+  Map<String, double> _rdiOverrides = {};
   int _daysWithData = 0;
 
   @override
   void initState() {
     super.initState();
+    RdiOverridesStore().load().then((overrides) {
+      if (!mounted) return;
+      setState(() => _rdiOverrides = overrides);
+    });
     _load();
   }
 
@@ -113,7 +119,7 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final defs = nutrientCatalog.where((d) => d.rdi != null).toList();
+    final defs = nutrientCatalog.where((d) => effectiveRdi(d, _rdiOverrides) != null).toList();
     final needsAttention = <NutrientDef>[];
     final onTarget = <NutrientDef>[];
     final notTracked = <NutrientDef>[];
@@ -124,11 +130,15 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
         continue;
       }
       final avg = _avgIntake[def.key] ?? 0;
-      final pct = avg / def.rdi! * 100;
+      final pct = avg / effectiveRdi(def, _rdiOverrides)! * 100;
       (pct < 90 ? needsAttention : onTarget).add(def);
     }
-    needsAttention.sort((a, b) => (_avgIntake[a.key]! / a.rdi!).compareTo(_avgIntake[b.key]! / b.rdi!));
-    onTarget.sort((a, b) => (_avgIntake[a.key]! / a.rdi!).compareTo(_avgIntake[b.key]! / b.rdi!));
+    needsAttention.sort(
+      (a, b) => (_avgIntake[a.key]! / effectiveRdi(a, _rdiOverrides)!).compareTo(_avgIntake[b.key]! / effectiveRdi(b, _rdiOverrides)!),
+    );
+    onTarget.sort(
+      (a, b) => (_avgIntake[a.key]! / effectiveRdi(a, _rdiOverrides)!).compareTo(_avgIntake[b.key]! / effectiveRdi(b, _rdiOverrides)!),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrient Gaps')),
@@ -165,12 +175,18 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
                 else ...[
                   if (needsAttention.isNotEmpty) ...[
                     _sectionLabel(Icons.warning_amber_rounded, 'NEEDS ATTENTION', Colors.amber),
-                    _card([for (final def in needsAttention) _NutrientGapRow(def: def, avg: _avgIntake[def.key]!)]),
+                    _card([
+                      for (final def in needsAttention)
+                        _NutrientGapRow(def: def, avg: _avgIntake[def.key]!, rdi: effectiveRdi(def, _rdiOverrides)!),
+                    ]),
                     const SizedBox(height: 24),
                   ],
                   if (onTarget.isNotEmpty) ...[
                     _sectionLabel(Icons.check_circle_outline, 'ON TARGET', AppColors.accent),
-                    _card([for (final def in onTarget) _NutrientGapRow(def: def, avg: _avgIntake[def.key]!)]),
+                    _card([
+                      for (final def in onTarget)
+                        _NutrientGapRow(def: def, avg: _avgIntake[def.key]!, rdi: effectiveRdi(def, _rdiOverrides)!),
+                    ]),
                     const SizedBox(height: 24),
                   ],
                   if (notTracked.isNotEmpty) ...[
@@ -205,14 +221,15 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
 class _NutrientGapRow extends StatelessWidget {
   final NutrientDef def;
   final double avg;
+  final double rdi;
 
-  const _NutrientGapRow({required this.def, required this.avg});
+  const _NutrientGapRow({required this.def, required this.avg, required this.rdi});
 
   String _fmt(double n) => n >= 100 ? n.round().toString() : n.toStringAsFixed(1);
 
   @override
   Widget build(BuildContext context) {
-    final pct = (avg / def.rdi! * 100).clamp(0, 999).toDouble();
+    final pct = (avg / rdi * 100).clamp(0, 999).toDouble();
     final color = pct >= 90
         ? AppColors.accent
         : (pct >= 50 ? Colors.amber : Colors.redAccent);
@@ -226,7 +243,7 @@ class _NutrientGapRow extends StatelessWidget {
             children: [
               Expanded(child: Text(def.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
               Text(
-                '${_fmt(avg)}/${_fmt(def.rdi!)} ${def.unit}',
+                '${_fmt(avg)}/${_fmt(rdi)} ${def.unit}',
                 style: TextStyle(fontSize: 12, color: AppColors.textMuted),
               ),
               const SizedBox(width: 8),

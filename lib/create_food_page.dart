@@ -4,6 +4,7 @@ import 'custom_foods_store.dart';
 import 'food_avatar.dart';
 import 'models.dart';
 import 'nutrients.dart';
+import 'rdi_overrides_store.dart';
 import 'theme.dart';
 import 'user_targets.dart';
 
@@ -32,6 +33,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
   String? _submitError;
   bool _showMoreNutrients = false;
   UserTargets _targets = UserTargets.defaults;
+  Map<String, double> _rdiOverrides = {};
 
   bool get _isEditing => widget.existing != null;
 
@@ -41,6 +43,10 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
     UserTargetsStore().load().then((t) {
       if (!mounted) return;
       setState(() => _targets = t);
+    });
+    RdiOverridesStore().load().then((overrides) {
+      if (!mounted) return;
+      setState(() => _rdiOverrides = overrides);
     });
     final prefill = widget.existing;
     _nameController = TextEditingController(text: prefill?.name ?? '');
@@ -384,7 +390,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
 
   Widget _nutrientFieldWithBar(NutrientDef def) {
     final controller = _nutrientControllers[def.key]!;
-    final rdi = def.rdi;
+    final rdi = effectiveRdi(def, _rdiOverrides);
     return Padding(
       padding: EdgeInsets.zero,
       child: Column(

@@ -87,3 +87,7 @@ const Map<NutrientGroup, String> nutrientGroupLabels = {
   NutrientGroup.fats: 'FATS',
   NutrientGroup.other: 'OTHER',
 };
+
+/// [def]'s RDI, or the user's override for it if one exists in [overrides].
+/// Still null for Total Sugars (by design — see [NutrientDef.rdi]).
+double? effectiveRdi(NutrientDef def, Map<String, double> overrides) => overrides[def.key] ?? def.rdi;

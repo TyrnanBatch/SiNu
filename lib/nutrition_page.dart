@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'app_drawer.dart';
 import 'nutrition_calc.dart';
+import 'rdi_editor_page.dart';
 import 'theme.dart';
 import 'user_profile.dart';
 import 'user_targets.dart';
@@ -244,6 +245,18 @@ class _NutritionPageState extends State<NutritionPage> {
                       const SizedBox(height: 8),
                       _MacroLegendRow(label: 'Fat', grams: fat, kcalPerGram: 9, color: AppColors.fat),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RdiEditorPage())),
+                  icon: const Icon(Icons.tune, size: 18),
+                  label: const Text('Edit RDIs'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    side: BorderSide(color: AppColors.border),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 ),
                 const SizedBox(height: 24),
