@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'app_drawer.dart';
 import 'models.dart';
+import 'photo_comparison_page.dart';
 import 'photo_entry.dart';
 import 'photos_store.dart';
 import 'storage.dart';
@@ -30,6 +31,9 @@ class _PhotosPageState extends State<PhotosPage> {
   List<PhotoEntry> _photos = [];
   bool _loading = true;
   bool _adding = false;
+
+  bool _comparing = false;
+  final Set<DateTime> _selectedDates = {};
 
   @override
   void initState() {
@@ -135,21 +139,66 @@ class _PhotosPageState extends State<PhotosPage> {
 
   String _formatDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
 
+  void _toggleComparing() {
+    setState(() {
+      _comparing = !_comparing;
+      _selectedDates.clear();
+    });
+  }
+
+  void _toggleSelected(PhotoEntry photo) {
+    setState(() {
+      if (_selectedDates.contains(photo.date)) {
+        _selectedDates.remove(photo.date);
+        return;
+      }
+      if (_selectedDates.length >= 2) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pick 2 photos to compare')));
+        return;
+      }
+      _selectedDates.add(photo.date);
+    });
+  }
+
+  Future<void> _goToComparison() async {
+    final selected = _photos.where((p) => _selectedDates.contains(p.date)).toList()..sort((a, b) => a.date.compareTo(b.date));
+    if (selected.length != 2) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PhotoComparisonPage(before: selected[0], after: selected[1])),
+    );
+    if (!mounted) return;
+    _toggleComparing();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Progress Photos'),
-        actions: [
-          IconButton(
-            icon: _adding
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.add_a_photo_outlined),
-            onPressed: _adding ? null : _addPhoto,
-          ),
-        ],
+        leading: _comparing ? IconButton(icon: const Icon(Icons.close), onPressed: _toggleComparing) : null,
+        title: Text(_comparing ? 'Select 2 Photos' : 'Progress Photos'),
+        actions: _comparing
+            ? [
+                TextButton(
+                  onPressed: _selectedDates.length == 2 ? _goToComparison : null,
+                  child: const Text('Compare'),
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(Icons.compare_arrows),
+                  tooltip: 'Compare two photos',
+                  onPressed: _photos.length < 2 ? null : _toggleComparing,
+                ),
+                IconButton(
+                  icon: _adding
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.add_a_photo_outlined),
+                  onPressed: _adding ? null : _addPhoto,
+                ),
+              ],
       ),
-      drawer: const AppDrawer(current: AppSection.photos),
+      drawer: _comparing ? null : const AppDrawer(current: AppSection.photos),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _photos.isEmpty
@@ -166,12 +215,13 @@ class _PhotosPageState extends State<PhotosPage> {
               itemCount: _photos.length,
               itemBuilder: (context, index) {
                 final photo = _photos[index];
+                final selected = _selectedDates.contains(photo.date);
                 return Material(
                   color: AppColors.card,
                   borderRadius: BorderRadius.circular(12),
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
-                    onTap: () => _openDetail(photo),
+                    onTap: () => _comparing ? _toggleSelected(photo) : _openDetail(photo),
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
@@ -190,6 +240,17 @@ class _PhotosPageState extends State<PhotosPage> {
                             ),
                           ),
                         ),
+                        if (_comparing)
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: Icon(
+                              selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                              size: 20,
+                              color: selected ? AppColors.accent : Colors.white,
+                              shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
+                            ),
+                          ),
                       ],
                     ),
                   ),

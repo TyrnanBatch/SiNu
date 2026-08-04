@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'custom_foods_store.dart';
@@ -28,6 +30,9 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
   Set<String> _trackedKeys = {};
   Map<String, double> _rdiOverrides = {};
   int _daysWithData = 0;
+
+  static const _radarGroups = [NutrientGroup.vitamins, NutrientGroup.minerals, NutrientGroup.aminoAcids, NutrientGroup.fats];
+  NutrientGroup _radarGroup = NutrientGroup.vitamins;
 
   @override
   void initState() {
@@ -173,6 +178,44 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
                     ),
                   )
                 else ...[
+                  _sectionLabel(Icons.hub_outlined, 'NUTRIENT FINGERPRINT', AppColors.accent),
+                  _card([
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              for (final group in _radarGroups)
+                                ChoiceChip(
+                                  label: Text(nutrientGroupLabels[group]!, style: const TextStyle(fontSize: 11)),
+                                  selected: _radarGroup == group,
+                                  onSelected: (_) => setState(() => _radarGroup = group),
+                                  backgroundColor: AppColors.card,
+                                  selectedColor: AppColors.accent.withValues(alpha: 0.2),
+                                  side: BorderSide(color: AppColors.border),
+                                ),
+                            ],
+                          ),
+                          _NutrientRadarChart(
+                            labels: [
+                              for (final def in nutrientCatalog.where((d) => d.group == _radarGroup && d.rdi != null)) def.label,
+                            ],
+                            values: [
+                              for (final def in nutrientCatalog.where((d) => d.group == _radarGroup && d.rdi != null))
+                                _trackedKeys.contains(def.key)
+                                    ? (_avgIntake[def.key] ?? 0) / effectiveRdi(def, _rdiOverrides)! * 100
+                                    : 0.0,
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
                   if (needsAttention.isNotEmpty) ...[
                     _sectionLabel(Icons.warning_amber_rounded, 'NEEDS ATTENTION', Colors.amber),
                     _card([
@@ -271,4 +314,112 @@ class _NutrientGapRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Spider/radar chart of %-of-RDI across every nutrient in one group, so
+/// the "shape" of the diet within that group is visible at a glance —
+/// a collapsed wedge on one side means that nutrient is being neglected.
+/// A 0% axis can mean either "tracked but zero intake" or "no food has
+/// this nutrient filled in" — the chart can't tell those apart.
+class _NutrientRadarChart extends StatelessWidget {
+  final List<String> labels;
+  final List<double> values;
+
+  const _NutrientRadarChart({required this.labels, required this.values});
+
+  @override
+  Widget build(BuildContext context) {
+    if (labels.length < 3) {
+      return const SizedBox(
+        height: 100,
+        child: Center(child: Text('Not enough nutrients in this group for a radar chart')),
+      );
+    }
+    return SizedBox(
+      height: 280,
+      width: double.infinity,
+      child: CustomPaint(painter: _RadarPainter(labels: labels, values: values)),
+    );
+  }
+}
+
+class _RadarPainter extends CustomPainter {
+  static const _maxAxis = 150.0;
+  static const _rings = [0.25, 0.5, 0.75, 1.0];
+
+  final List<String> labels;
+  final List<double> values;
+
+  _RadarPainter({required this.labels, required this.values});
+
+  Offset _pointOn(Offset center, double radius, int index, int count, double frac) {
+    final angle = -math.pi / 2 + (2 * math.pi * index / count);
+    return center + Offset(math.cos(angle), math.sin(angle)) * radius * frac;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final n = labels.length;
+    final center = Offset(size.width / 2, size.height / 2 - 6);
+    final radius = math.min(size.width, size.height) / 2 - 36;
+
+    final webPaint = Paint()
+      ..color = AppColors.border
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    for (final frac in _rings) {
+      final path = Path();
+      for (var i = 0; i <= n; i++) {
+        final p = _pointOn(center, radius, i % n, n, frac);
+        if (i == 0) {
+          path.moveTo(p.dx, p.dy);
+        } else {
+          path.lineTo(p.dx, p.dy);
+        }
+      }
+      canvas.drawPath(path, webPaint);
+    }
+
+    for (var i = 0; i < n; i++) {
+      final end = _pointOn(center, radius, i, n, 1.0);
+      canvas.drawLine(center, end, webPaint);
+
+      final labelPos = _pointOn(center, radius + 14, i, n, 1.0);
+      final tp = TextPainter(
+        text: TextSpan(text: labels[i], style: TextStyle(fontSize: 9, color: AppColors.textMuted)),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: 64);
+      tp.paint(canvas, labelPos - Offset(tp.width / 2, tp.height / 2));
+    }
+
+    final dataPath = Path();
+    for (var i = 0; i <= n; i++) {
+      final idx = i % n;
+      final frac = (values[idx] / _maxAxis).clamp(0.0, 1.0);
+      final p = _pointOn(center, radius, idx, n, frac);
+      if (i == 0) {
+        dataPath.moveTo(p.dx, p.dy);
+      } else {
+        dataPath.lineTo(p.dx, p.dy);
+      }
+    }
+    canvas.drawPath(dataPath, Paint()..color = AppColors.accent.withValues(alpha: 0.22));
+    canvas.drawPath(
+      dataPath,
+      Paint()
+        ..color = AppColors.accent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+
+    for (var i = 0; i < n; i++) {
+      final frac = (values[i] / _maxAxis).clamp(0.0, 1.0);
+      canvas.drawCircle(_pointOn(center, radius, i, n, frac), 3, Paint()..color = AppColors.accent);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadarPainter oldDelegate) => oldDelegate.values != values || oldDelegate.labels != labels;
 }
