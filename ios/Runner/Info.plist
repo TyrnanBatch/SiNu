@@ -27,7 +27,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>SiNu uses the camera to scan food barcodes.</string>
+	<string>SiNu uses the camera to scan food barcodes and take progress photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SiNu needs access to your photo library to add progress photos.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>SiNu reads your step count from Apple Health to show it in Trends.</string>
 	<key>NSHealthUpdateUsageDescription</key>

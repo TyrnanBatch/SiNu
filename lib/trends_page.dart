@@ -6,6 +6,8 @@ import 'app_drawer.dart';
 import 'health_service.dart';
 import 'models.dart';
 import 'nutrient_gaps_page.dart';
+import 'photos_page.dart';
+import 'photos_store.dart';
 import 'storage.dart';
 import 'theme.dart';
 import 'user_targets.dart';
@@ -20,6 +22,7 @@ class _DayTotals {
   final bool hasData;
   final int? steps;
   final double? weightKg;
+  final bool hasPhoto;
 
   const _DayTotals({
     required this.date,
@@ -30,6 +33,7 @@ class _DayTotals {
     required this.hasData,
     this.steps,
     this.weightKg,
+    this.hasPhoto = false,
   });
 }
 
@@ -84,6 +88,8 @@ class _TrendsPageState extends State<TrendsPage> {
     final weightStore = WeightStore();
     final today = _today;
 
+    final photoDates = (await PhotosStore().loadAll()).map((p) => DateTime(p.date.year, p.date.month, p.date.day)).toSet();
+
     final days = <_DayTotals>[];
     for (var i = _periodDays - 1; i >= 0; i--) {
       final date = today.subtract(Duration(days: i));
@@ -100,6 +106,7 @@ class _TrendsPageState extends State<TrendsPage> {
           hasData: meals.isNotEmpty,
           steps: steps,
           weightKg: weightKg,
+          hasPhoto: photoDates.contains(date),
         ),
       );
     }
@@ -276,8 +283,20 @@ class _TrendsPageState extends State<TrendsPage> {
         _WeightLineChart(
           dates: _days.map((d) => d.date).toList(),
           values: _days.map((d) => d.weightKg).toList(),
+          hasPhoto: _days.map((d) => d.hasPhoto).toList(),
           labelFor: _shortLabel,
+          onDayTap: (date) => Navigator.push(context, MaterialPageRoute(builder: (context) => PhotosPage(initialDate: date))),
         ),
+        const SizedBox(height: 4),
+        if (_days.any((d) => d.hasPhoto))
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.camera_alt, size: 12, color: AppColors.accent),
+              const SizedBox(width: 4),
+              Text('= photo logged, tap to view', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+            ],
+          ),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -529,9 +548,17 @@ class _BarChart extends StatelessWidget {
 class _WeightLineChart extends StatelessWidget {
   final List<DateTime> dates;
   final List<double?> values;
+  final List<bool> hasPhoto;
   final String Function(DateTime) labelFor;
+  final void Function(DateTime date)? onDayTap;
 
-  const _WeightLineChart({required this.dates, required this.values, required this.labelFor});
+  const _WeightLineChart({
+    required this.dates,
+    required this.values,
+    required this.hasPhoto,
+    required this.labelFor,
+    this.onDayTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -554,8 +581,21 @@ class _WeightLineChart extends StatelessWidget {
         SizedBox(
           height: chartHeight,
           width: double.infinity,
-          child: CustomPaint(
-            painter: _WeightLinePainter(values: values, minVal: minVal, range: range),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final stepX = dates.length > 1 ? constraints.maxWidth / (dates.length - 1) : constraints.maxWidth;
+              return GestureDetector(
+                onTapUp: (details) {
+                  if (onDayTap == null || dates.length < 2) return;
+                  final index = (details.localPosition.dx / stepX).round().clamp(0, dates.length - 1);
+                  if (hasPhoto[index]) onDayTap!(dates[index]);
+                },
+                child: CustomPaint(
+                  size: Size(constraints.maxWidth, chartHeight),
+                  painter: _WeightLinePainter(values: values, hasPhoto: hasPhoto, minVal: minVal, range: range),
+                ),
+              );
+            },
           ),
         ),
         const SizedBox(height: 4),
@@ -580,10 +620,11 @@ class _WeightLineChart extends StatelessWidget {
 
 class _WeightLinePainter extends CustomPainter {
   final List<double?> values;
+  final List<bool> hasPhoto;
   final double minVal;
   final double range;
 
-  _WeightLinePainter({required this.values, required this.minVal, required this.range});
+  _WeightLinePainter({required this.values, required this.hasPhoto, required this.minVal, required this.range});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -603,6 +644,10 @@ class _WeightLinePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     final dotPaint = Paint()..color = AppColors.weight;
+    final photoRingPaint = Paint()
+      ..color = AppColors.accent
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
 
     Offset? prev;
     for (var i = 0; i < values.length; i++) {
@@ -614,13 +659,17 @@ class _WeightLinePainter extends CustomPainter {
       final point = Offset(i * stepX, yFor(v));
       if (prev != null) canvas.drawLine(prev, point, linePaint);
       canvas.drawCircle(point, 3, dotPaint);
+      if (hasPhoto[i]) canvas.drawCircle(point, 7, photoRingPaint);
       prev = point;
     }
   }
 
   @override
   bool shouldRepaint(covariant _WeightLinePainter oldDelegate) =>
-      oldDelegate.values != values || oldDelegate.minVal != minVal || oldDelegate.range != range;
+      oldDelegate.values != values ||
+      oldDelegate.hasPhoto != hasPhoto ||
+      oldDelegate.minVal != minVal ||
+      oldDelegate.range != range;
 }
 
 class _DashedLine extends StatelessWidget {
