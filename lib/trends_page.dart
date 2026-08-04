@@ -121,7 +121,7 @@ class _TrendsPageState extends State<TrendsPage> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -260,7 +260,7 @@ class _TrendsPageState extends State<TrendsPage> {
   Widget _buildWeightSection() {
     final daysWithWeight = _days.where((d) => d.weightKg != null).toList();
     if (daysWithWeight.isEmpty) {
-      return const Text(
+      return Text(
         'No weight logged yet — log it from the Profile page to see the trend here.',
         style: TextStyle(fontSize: 12, color: AppColors.textMuted),
       );
@@ -301,7 +301,7 @@ class _TrendsPageState extends State<TrendsPage> {
 
   Widget _buildStepsSection({required List<_DayTotals> daysWithSteps, required double avgSteps}) {
     if (!HealthService.isSupported) {
-      return const Text(
+      return Text(
         'Step tracking needs a phone — this reads from Health Connect (Android) or Apple Health (iOS), '
         'neither of which is available on this platform.',
         style: TextStyle(fontSize: 12, color: AppColors.textMuted),
@@ -314,7 +314,7 @@ class _TrendsPageState extends State<TrendsPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Step tracking permission was not granted, so steps can\'t be shown here.',
             style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
@@ -377,7 +377,7 @@ class _StatChip extends StatelessWidget {
         children: [
           Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+          Text(label, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
         ],
       ),
     );
@@ -405,7 +405,7 @@ class _MacroAvgRow extends StatelessWidget {
             Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
             Text(
               '${grams.round()}g / ${target.round()}g',
-              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
           ],
         ),
@@ -415,7 +415,7 @@ class _MacroAvgRow extends StatelessWidget {
           child: LinearProgressIndicator(
             value: pct,
             minHeight: 6,
-            backgroundColor: Colors.white12,
+            backgroundColor: AppColors.track,
             valueColor: AlwaysStoppedAnimation(color),
           ),
         ),
@@ -448,7 +448,7 @@ class _BarChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (dates.isEmpty) {
-      return const SizedBox(height: 160, child: Center(child: Text('No data', style: TextStyle(color: AppColors.textMuted))));
+      return SizedBox(height: 160, child: Center(child: Text('No data', style: TextStyle(color: AppColors.textMuted))));
     }
     final maxVal = math.max(target, values.fold<double>(0, math.max)) * 1.15;
     const chartHeight = 160.0;
@@ -482,7 +482,7 @@ class _BarChart extends StatelessWidget {
                           child: Container(
                             height: maxVal <= 0 ? 0 : (values[i] / maxVal * chartHeight).clamp(0.0, chartHeight),
                             decoration: BoxDecoration(
-                              color: !hasData[i] ? Colors.white10 : (dates[i] == isToday ? color : color.withValues(alpha: 0.55)),
+                              color: !hasData[i] ? AppColors.trackFaint : (dates[i] == isToday ? color : color.withValues(alpha: 0.55)),
                               borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
                             ),
                           ),
@@ -503,7 +503,7 @@ class _BarChart extends StatelessWidget {
                     ? Text(
                         labelFor(dates[i]),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
+                        style: TextStyle(fontSize: 9, color: AppColors.textMuted),
                       )
                     : const SizedBox.shrink(),
               ),
@@ -515,7 +515,7 @@ class _BarChart extends StatelessWidget {
           children: [
             Container(width: 16, height: 2, color: AppColors.textMuted),
             const SizedBox(width: 6),
-            Text(targetLabel, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+            Text(targetLabel, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
           ],
         ),
       ],
@@ -538,7 +538,7 @@ class _WeightLineChart extends StatelessWidget {
     final present = values.whereType<double>().toList();
     const chartHeight = 160.0;
     if (present.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: chartHeight,
         child: Center(child: Text('No data', style: TextStyle(color: AppColors.textMuted))),
       );
@@ -567,7 +567,7 @@ class _WeightLineChart extends StatelessWidget {
                     ? Text(
                         labelFor(dates[i]),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
+                        style: TextStyle(fontSize: 9, color: AppColors.textMuted),
                       )
                     : const SizedBox.shrink(),
               ),

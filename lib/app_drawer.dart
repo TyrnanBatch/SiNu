@@ -96,7 +96,7 @@ class AppDrawer extends StatelessWidget {
                 onTap: () => _go(context, AppSection.trends),
               ),
               const Spacer(),
-              const Divider(color: AppColors.border, height: 24),
+              Divider(color: AppColors.border, height: 24),
               _DrawerItem(
                 icon: Icons.settings_outlined,
                 label: 'Settings',
@@ -154,7 +154,7 @@ class _DrawerItem extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                    color: active ? AppColors.accent : Colors.white,
+                    color: active ? AppColors.accent : AppColors.textPrimary,
                   ),
                 ),
               ),

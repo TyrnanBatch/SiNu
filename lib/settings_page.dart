@@ -5,6 +5,7 @@ import 'app_drawer.dart';
 import 'backup_service.dart';
 import 'health_service.dart';
 import 'theme.dart';
+import 'theme_controller.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -61,7 +62,7 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Paste a backup exported from SiNu. This overwrites your current foods, meal templates, '
               'logged history, and targets with whatever the backup contains.',
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
@@ -143,7 +144,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -160,7 +161,7 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Column(
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: AppColors.border),
+            if (i > 0) Divider(height: 1, color: AppColors.border),
             children[i],
           ],
         ],
@@ -191,11 +192,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: color)),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted),
+              Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted),
             ],
           ),
         ),
@@ -211,6 +212,34 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _sectionLabel(Icons.palette_outlined, 'APPEARANCE'),
+          _card([
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Icon(
+                    ThemeController.instance.isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      ThemeController.instance.isDark ? 'Dark Mode' : 'Light Mode',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Switch(
+                    value: !ThemeController.instance.isDark,
+                    onChanged: (light) => ThemeController.instance.setDark(!light),
+                    activeThumbColor: AppColors.accent,
+                  ),
+                ],
+              ),
+            ),
+          ]),
+          const SizedBox(height: 24),
           _sectionLabel(Icons.directions_walk, 'STEP TRACKING'),
           _card([
             Padding(
@@ -244,7 +273,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           !HealthService.isSupported
                               ? 'Reads steps from Health Connect (Android) or Apple Health (iOS) — neither exists here.'
                               : 'Used by the Trends page to show your daily step count.',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                         ),
                       ],
                     ),
@@ -312,17 +341,17 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
           _sectionLabel(Icons.info_outline, 'ABOUT'),
           _card([
-            const Padding(
-              padding: EdgeInsets.all(14),
+            Padding(
+              padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  Icon(Icons.eco_rounded, color: AppColors.accent, size: 22),
-                  SizedBox(width: 14),
+                  const Icon(Icons.eco_rounded, color: AppColors.accent, size: 22),
+                  const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('SiNu', style: TextStyle(fontWeight: FontWeight.w600)),
-                      SizedBox(height: 2),
+                      const Text('SiNu', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
                       Text('Version 1.0.0', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                     ],
                   ),

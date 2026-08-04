@@ -12,6 +12,7 @@ import 'meal_templates_store.dart';
 import 'models.dart';
 import 'storage.dart';
 import 'theme.dart';
+import 'theme_controller.dart';
 import 'user_targets.dart';
 
 /// Lets [HomePage] know when it's been returned to (e.g. after editing
@@ -23,12 +24,37 @@ void main() {
   runApp(const SiNuApp());
 }
 
-class SiNuApp extends StatelessWidget {
+class SiNuApp extends StatefulWidget {
   const SiNuApp({super.key});
+
+  @override
+  State<SiNuApp> createState() => _SiNuAppState();
+}
+
+class _SiNuAppState extends State<SiNuApp> {
+  @override
+  void initState() {
+    super.initState();
+    ThemeController.instance.addListener(_onThemeChanged);
+    ThemeController.instance.load();
+  }
+
+  @override
+  void dispose() {
+    ThemeController.instance.removeListener(_onThemeChanged);
+    super.dispose();
+  }
+
+  void _onThemeChanged() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // AppColors is read via plain static getters, not Theme.of(context),
+      // so Flutter has no dependency to track and won't rebuild already
+      // -mounted pages just because this ancestor rebuilt. Keying on the
+      // theme flag forces a full teardown/remount of the whole app instead.
+      key: ValueKey(ThemeController.instance.isDark),
       title: 'SiNu',
       theme: buildAppTheme(),
       navigatorObservers: [routeObserver],
@@ -174,9 +200,34 @@ class _HomePageState extends State<HomePage> with RouteAware {
     _persistMeals();
   }
 
+  Future<void> _renameMeal(MealData meal) async {
+    final controller = TextEditingController(text: meal.name ?? 'Meal ${meal.number}');
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename Meal'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Name', hintText: 'e.g. Breakfast'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || !mounted) return;
+    setState(() => meal.name = name.isEmpty ? null : name);
+    _persistMeals();
+  }
+
   Future<void> _saveMealAsTemplate(MealData meal) async {
     if (meal.items.isEmpty) return;
-    final controller = TextEditingController(text: 'Meal ${meal.number}');
+    final controller = TextEditingController(text: meal.name ?? 'Meal ${meal.number}');
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -243,7 +294,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     if (chosen == null || !mounted) return;
 
     setState(() {
-      _meals.add(MealData(number: _meals.length + 1, items: chosen.items.map((i) => i.copy()).toList()));
+      _meals.add(MealData(number: _meals.length + 1, name: chosen.name, items: chosen.items.map((i) => i.copy()).toList()));
     });
     _persistMeals();
   }
@@ -378,6 +429,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                 onDeleteItem: (item) => _deleteItem(meal, item),
                 onDeleteMeal: () => _confirmDeleteMeal(meal),
                 onSaveTemplate: () => _saveMealAsTemplate(meal),
+                onRename: () => _renameMeal(meal),
               ),
             ),
             Row(
@@ -463,7 +515,7 @@ class DateHeader extends StatelessWidget {
           child: Text(
             dateLine,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
         ),
         IconButton(icon: const Icon(Icons.chevron_right), onPressed: onNext),
@@ -505,10 +557,10 @@ class SummaryRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.local_fire_department, size: 16, color: AppColors.accent),
-              SizedBox(width: 4),
+              const Icon(Icons.local_fire_department, size: 16, color: AppColors.accent),
+              const SizedBox(width: 4),
               Text(
                 'ENERGY',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
@@ -583,7 +635,7 @@ class _EnergyRing extends StatelessWidget {
             child: CircularProgressIndicator(
               value: progress.clamp(0, 1),
               strokeWidth: 10,
-              backgroundColor: Colors.white12,
+              backgroundColor: AppColors.track,
               valueColor: const AlwaysStoppedAnimation(AppColors.accent),
             ),
           ),
@@ -591,12 +643,12 @@ class _EnergyRing extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('$eaten', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const Text(
+              Text(
                 'EATEN',
                 style: TextStyle(fontSize: 10, letterSpacing: 1.0, color: AppColors.textMuted),
               ),
               const SizedBox(height: 6),
-              Container(width: 22, height: 1, color: Colors.white24),
+              Container(width: 22, height: 1, color: AppColors.border),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -641,13 +693,13 @@ class VerticalMacroBar extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         Text(
           '${target.round()}g',
-          style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
+          style: TextStyle(fontSize: 9, color: AppColors.textMuted),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -660,7 +712,7 @@ class VerticalMacroBar extends StatelessWidget {
                 Positioned.fill(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
-                    child: const ColoredBox(color: Colors.white12),
+                    child: ColoredBox(color: AppColors.track),
                   ),
                 ),
                 Align(
@@ -685,7 +737,7 @@ class VerticalMacroBar extends StatelessWidget {
         ),
         Text(
           '${current.round()}g',
-          style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
+          style: TextStyle(fontSize: 9, color: AppColors.textMuted),
         ),
       ],
     );
@@ -721,6 +773,7 @@ class MealSection extends StatefulWidget {
   final ValueChanged<LoggedItem> onDeleteItem;
   final VoidCallback onDeleteMeal;
   final VoidCallback onSaveTemplate;
+  final VoidCallback onRename;
 
   const MealSection({
     super.key,
@@ -730,6 +783,7 @@ class MealSection extends StatefulWidget {
     required this.onDeleteItem,
     required this.onDeleteMeal,
     required this.onSaveTemplate,
+    required this.onRename,
   });
 
   @override
@@ -763,12 +817,12 @@ class _MealSectionState extends State<MealSection> {
             backgroundColor: AppColors.meal,
             child: Icon(Icons.restaurant_menu, size: 18, color: Colors.white),
           ),
-          title: Text('Meal ${meal.number}', style: const TextStyle(fontWeight: FontWeight.w600)),
+          title: Text(meal.name ?? 'Meal ${meal.number}', style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
               '${meal.proteinTotal.round()} P  ${meal.carbsTotal.round()} C  ${meal.fatTotal.round()} F',
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
@@ -776,16 +830,18 @@ class _MealSectionState extends State<MealSection> {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${meal.kcalTotal.round()} kcal', style: const TextStyle(color: AppColors.textSecondary)),
+              Text('${meal.kcalTotal.round()} kcal', style: TextStyle(color: AppColors.textSecondary)),
               const SizedBox(width: 2),
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 18, color: Colors.white38),
+                icon: Icon(Icons.more_vert, size: 18, color: AppColors.textMuted),
                 padding: EdgeInsets.zero,
                 onSelected: (value) {
+                  if (value == 'rename') widget.onRename();
                   if (value == 'save') widget.onSaveTemplate();
                   if (value == 'delete') widget.onDeleteMeal();
                 },
                 itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'rename', child: Text('Rename')),
                   if (meal.items.isNotEmpty) const PopupMenuItem(value: 'save', child: Text('Save as Template')),
                   const PopupMenuItem(value: 'delete', child: Text('Delete Meal')),
                 ],
@@ -796,8 +852,8 @@ class _MealSectionState extends State<MealSection> {
           ),
           children: [
             if (meal.items.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text('No items yet', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
@@ -912,7 +968,7 @@ class _FoodItemTileState extends State<FoodItemTile> {
                       const SizedBox(height: 2),
                       Text(
                         '${item.grams.round()} · ${item.proteinG.round()} P  ${item.carbsG.round()} C  ${item.fatG.round()} F',
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -925,7 +981,7 @@ class _FoodItemTileState extends State<FoodItemTile> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text('${item.kcal.round()}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const Text('kcal', style: TextStyle(fontSize: 10, color: Colors.white54)),
+                    Text('kcal', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                   ],
                 ),
               ],

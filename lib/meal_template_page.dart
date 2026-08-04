@@ -119,7 +119,7 @@ class _MealTemplatePageState extends State<MealTemplatePage> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -143,14 +143,14 @@ class _MealTemplatePageState extends State<MealTemplatePage> {
                   const SizedBox(height: 4),
                   Text(
                     '${item.grams.round()}g · ${item.kcal.round()} kcal',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                   ),
                 ],
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, size: 20, color: Colors.white38),
+            icon: Icon(Icons.delete_outline, size: 20, color: AppColors.textMuted),
             onPressed: () => _removeItem(item),
           ),
         ],
@@ -179,7 +179,7 @@ class _MealTemplatePageState extends State<MealTemplatePage> {
             Row(
               children: [
                 Expanded(child: _sectionLabel(Icons.restaurant_menu, 'FOODS')),
-                Text('${totalKcal.round()} kcal', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                Text('${totalKcal.round()} kcal', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
               ],
             ),
             if (_items.isEmpty)
@@ -191,7 +191,7 @@ class _MealTemplatePageState extends State<MealTemplatePage> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: const Text('No foods yet', style: TextStyle(color: AppColors.textMuted)),
+                child: Text('No foods yet', style: TextStyle(color: AppColors.textMuted)),
               )
             else
               Container(
@@ -203,7 +203,7 @@ class _MealTemplatePageState extends State<MealTemplatePage> {
                 child: Column(
                   children: [
                     for (var i = 0; i < _items.length; i++) ...[
-                      if (i > 0) const Divider(height: 1, color: AppColors.border),
+                      if (i > 0) Divider(height: 1, color: AppColors.border),
                       _itemTile(_items[i]),
                     ],
                   ],

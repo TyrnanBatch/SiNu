@@ -99,9 +99,9 @@ class _ProfilePageState extends State<ProfilePage> {
   InputDecoration _fieldDecoration(String label, {String? suffixText}) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+      labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
       suffixText: suffixText,
-      suffixStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      suffixStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(vertical: 9),
       border: InputBorder.none,
@@ -121,7 +121,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         children: [
           for (var i = 0; i < fields.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: AppColors.border),
+            if (i > 0) Divider(height: 1, color: AppColors.border),
             fields[i],
           ],
         ],
@@ -138,7 +138,7 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -196,8 +196,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ]),
                 const SizedBox(height: 8),
-                const Padding(
-                  padding: EdgeInsets.only(left: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
                   child: Text(
                     'Logged daily, shown as a trend on the Trends page.',
                     style: TextStyle(fontSize: 11, color: AppColors.textMuted),
@@ -217,7 +217,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       onSelectionChanged: (s) => setState(() => _sex = s.first),
                     ),
                   ),
-                  const Divider(height: 1, color: AppColors.border),
+                  Divider(height: 1, color: AppColors.border),
                   TextFormField(
                     controller: _heightController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -235,8 +235,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ]),
                 const SizedBox(height: 8),
-                const Padding(
-                  padding: EdgeInsets.only(left: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
                   child: Text(
                     'Used to prefill "Get Recommendations" on the Nutrition & Steps page.',
                     style: TextStyle(fontSize: 11, color: AppColors.textMuted),
@@ -253,7 +253,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         children: [
                           Text('${bmr.round()} kcal/day', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 2),
-                          const Text(
+                          Text(
                             'Calories burned at rest (Mifflin-St Jeor)',
                             style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                           ),

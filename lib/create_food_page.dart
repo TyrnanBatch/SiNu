@@ -209,10 +209,10 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
   InputDecoration _fieldDecoration(String label, {Widget? prefixIcon, String? suffixText}) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+      labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
       prefixIcon: prefixIcon,
       suffixText: suffixText,
-      suffixStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      suffixStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(vertical: 9),
       border: InputBorder.none,
@@ -237,7 +237,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -255,7 +255,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
       child: Column(
         children: [
           for (var i = 0; i < fields.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: AppColors.border),
+            if (i > 0) Divider(height: 1, color: AppColors.border),
             fields[i],
           ],
         ],
@@ -281,7 +281,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
               child: LinearProgressIndicator(
                 value: pct,
                 minHeight: 5,
-                backgroundColor: Colors.white12,
+                backgroundColor: AppColors.track,
                 valueColor: AlwaysStoppedAnimation(color),
               ),
             ),
@@ -292,7 +292,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
             child: Text(
               pctLabel,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+              style: TextStyle(fontSize: 10, color: AppColors.textMuted),
             ),
           ),
         ],
@@ -338,9 +338,9 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
   InputDecoration _nutrientFieldDecoration(String label, {String? suffixText}) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+      labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
       suffixText: suffixText,
-      suffixStyle: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+      suffixStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(vertical: 3),
       border: InputBorder.none,
@@ -363,7 +363,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
               child: LinearProgressIndicator(
                 value: pct,
                 minHeight: 3,
-                backgroundColor: Colors.white12,
+                backgroundColor: AppColors.track,
                 valueColor: const AlwaysStoppedAnimation(AppColors.accent),
               ),
             ),
@@ -374,7 +374,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
             child: Text(
               pctLabel,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
+              style: TextStyle(fontSize: 9, color: AppColors.textMuted),
             ),
           ),
         ],
@@ -434,7 +434,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
             _card([
               TextFormField(
                 controller: _nameController,
-                decoration: _fieldDecoration('Name', prefixIcon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textMuted)),
+                decoration: _fieldDecoration('Name', prefixIcon: Icon(Icons.edit_outlined, size: 18, color: AppColors.textMuted)),
                 style: const TextStyle(fontWeight: FontWeight.w600),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
@@ -444,7 +444,7 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
                 style: _numberStyle,
                 decoration: _fieldDecoration(
                   'Reference portion',
-                  prefixIcon: const Icon(Icons.scale_outlined, size: 18, color: AppColors.textMuted),
+                  prefixIcon: Icon(Icons.scale_outlined, size: 18, color: AppColors.textMuted),
                   suffixText: 'g',
                 ),
                 validator: _requiredNumber,
@@ -455,14 +455,14 @@ class _CreateFoodPageState extends State<CreateFoodPage> {
                 style: _numberStyle,
                 decoration: _fieldDecoration(
                   'Default portion (optional)',
-                  prefixIcon: const Icon(Icons.local_dining_outlined, size: 18, color: AppColors.textMuted),
+                  prefixIcon: Icon(Icons.local_dining_outlined, size: 18, color: AppColors.textMuted),
                   suffixText: 'g',
                 ),
                 validator: _optionalPositiveNumber,
               ),
             ]),
-            const Padding(
-              padding: EdgeInsets.only(left: 4, top: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, top: 4),
               child: Text(
                 'e.g. "1 slice = 30g" — lets you log this food by number of portions instead of grams.',
                 style: TextStyle(fontSize: 11, color: AppColors.textMuted),

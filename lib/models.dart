@@ -187,7 +187,11 @@ class MealData {
   final int number;
   final List<LoggedItem> items;
 
-  MealData({required this.number, List<LoggedItem>? items}) : items = items ?? [];
+  /// Custom label (e.g. "Breakfast") — null means it just displays as
+  /// "Meal [number]".
+  String? name;
+
+  MealData({required this.number, this.name, List<LoggedItem>? items}) : items = items ?? [];
 
   double get kcalTotal => items.fold(0, (sum, i) => sum + i.kcal);
   double get proteinTotal => items.fold(0, (sum, i) => sum + i.proteinG);
@@ -196,12 +200,14 @@ class MealData {
 
   Map<String, dynamic> toJson() => {
     'number': number,
+    'name': name,
     'items': items.map((i) => i.toJson()).toList(),
   };
 
   factory MealData.fromJson(Map<String, dynamic> json) {
     return MealData(
       number: json['number'] as int,
+      name: json['name'] as String?,
       items: (json['items'] as List<dynamic>)
           .map((e) => LoggedItem.fromJson(e as Map<String, dynamic>))
           .toList(),

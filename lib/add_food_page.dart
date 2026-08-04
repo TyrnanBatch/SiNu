@@ -195,15 +195,15 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
       return [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text(_usdaError!, style: const TextStyle(color: Colors.white38, fontSize: 13)),
+          child: Text(_usdaError!, style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
         ),
       ];
     }
     if (_usdaResults.isEmpty) {
-      return const [
+      return [
         Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text('No common foods found', style: TextStyle(color: Colors.white38, fontSize: 13)),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text('No common foods found', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
         ),
       ];
     }
@@ -224,7 +224,7 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
 
     if (query.isEmpty) {
       if (foods.isEmpty) {
-        return const Center(child: Text('No foods found', style: TextStyle(color: Colors.white38)));
+        return Center(child: Text('No foods found', style: TextStyle(color: AppColors.textMuted)));
       }
       return ListView.separated(
         itemCount: foods.length,
@@ -255,7 +255,7 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
   Widget _buildLocalTab(int tabIndex, String emptyMessage) {
     final foods = _localFoodsFor(tabIndex);
     if (foods.isEmpty) {
-      return Center(child: Text(emptyMessage, style: const TextStyle(color: Colors.white38)));
+      return Center(child: Text(emptyMessage, style: TextStyle(color: AppColors.textMuted)));
     }
     return ListView.separated(
       itemCount: foods.length,
@@ -267,8 +267,8 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
   /// Common Foods tab: USDA only, needs a query to search against.
   Widget _buildCommonFoodsTab() {
     if (_query.trim().isEmpty) {
-      return const Center(
-        child: Text('Type to search common foods', style: TextStyle(color: Colors.white38)),
+      return Center(
+        child: Text('Type to search common foods', style: TextStyle(color: AppColors.textMuted)),
       );
     }
     return ListView(children: _usdaSectionChildren());
@@ -279,7 +279,7 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.textSecondary),
       ),
     );
   }
@@ -319,18 +319,18 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search, size: 20, color: Colors.white54),
+                  Icon(Icons.search, size: 20, color: AppColors.textSecondary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       autofocus: false,
                       onChanged: _onQueryChanged,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: InputBorder.none,
                         hintText: 'Search foods...',
-                        hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
                   ),
@@ -437,7 +437,7 @@ class FoodListTile extends StatelessWidget {
                     Text(
                       '${food.kcal.round()} kcal / ${food.portionGrams.round()} · '
                       '${food.proteinG.round()}g P  ${food.carbsG.round()}g C  ${food.fatG.round()}g F',
-                      style: const TextStyle(fontSize: 12, color: Colors.white54),
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -488,7 +488,7 @@ class UsdaFoodListTile extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(20)),
-                          child: const Text(
+                          child: Text(
                             'USDA',
                             style: TextStyle(fontSize: 9, color: AppColors.textMuted, fontWeight: FontWeight.w600),
                           ),
@@ -499,7 +499,7 @@ class UsdaFoodListTile extends StatelessWidget {
                     Text(
                       '${result.kcal.round()} kcal / 100 · '
                       '${result.proteinG.round()}g P  ${result.carbsG.round()}g C  ${result.fatG.round()}g F',
-                      style: const TextStyle(fontSize: 12, color: Colors.white54),
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
                 ),

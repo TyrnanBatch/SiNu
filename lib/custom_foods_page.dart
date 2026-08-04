@@ -279,17 +279,17 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search, size: 20, color: Colors.white54),
+                  Icon(Icons.search, size: 20, color: AppColors.textSecondary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       onChanged: (v) => setState(() => _query = v),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: InputBorder.none,
                         hintText: 'Search foods and meals...',
-                        hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
                   ),
@@ -323,7 +323,7 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(color: Colors.white54)),
+            Text(_error!, style: TextStyle(color: AppColors.textSecondary)),
             const SizedBox(height: 12),
             OutlinedButton(onPressed: _load, child: const Text('Retry')),
           ],
@@ -334,7 +334,7 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
       return Center(
         child: Text(
           _query.trim().isEmpty ? emptyMessage : 'No matches for "${_query.trim()}"',
-          style: const TextStyle(color: Colors.white38),
+          style: TextStyle(color: AppColors.textMuted),
         ),
       );
     }
@@ -362,7 +362,7 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: const TextStyle(color: Colors.white54)),
+            Text(_error!, style: TextStyle(color: AppColors.textSecondary)),
             const SizedBox(height: 12),
             OutlinedButton(onPressed: _load, child: const Text('Retry')),
           ],
@@ -374,7 +374,7 @@ class _CustomFoodsPageState extends State<CustomFoodsPage> with SingleTickerProv
       return Center(
         child: Text(
           _query.trim().isEmpty ? 'No saved meals yet' : 'No matches for "${_query.trim()}"',
-          style: const TextStyle(color: Colors.white38),
+          style: TextStyle(color: AppColors.textMuted),
         ),
       );
     }
@@ -424,7 +424,7 @@ class CustomFoodTile extends StatelessWidget {
           IconButton(
             icon: Icon(
               food.isFavorite ? Icons.star : Icons.star_border,
-              color: food.isFavorite ? Colors.amber : Colors.white38,
+              color: food.isFavorite ? Colors.amber : AppColors.textMuted,
             ),
             onPressed: onToggleFavorite,
           ),
@@ -443,7 +443,7 @@ class CustomFoodTile extends StatelessWidget {
                     ),
                     if (isScanned) ...[
                       const SizedBox(width: 6),
-                      const Icon(Icons.qr_code, size: 14, color: AppColors.textMuted),
+                      Icon(Icons.qr_code, size: 14, color: AppColors.textMuted),
                     ],
                   ],
                 ),
@@ -451,7 +451,7 @@ class CustomFoodTile extends StatelessWidget {
                 Text(
                   '${food.kcal.round()} kcal / ${food.portionGrams.round()} · '
                   '${food.proteinG.round()}g P  ${food.carbsG.round()}g C  ${food.fatG.round()}g F',
-                  style: const TextStyle(fontSize: 12, color: Colors.white54),
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -503,7 +503,7 @@ class MealTemplateTile extends StatelessWidget {
                   '${template.items.length} item${template.items.length == 1 ? '' : 's'} · '
                   '${template.kcalTotal.round()} kcal · '
                   '${template.proteinTotal.round()}g P  ${template.carbsTotal.round()}g C  ${template.fatTotal.round()}g F',
-                  style: const TextStyle(fontSize: 12, color: Colors.white54),
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
             ),

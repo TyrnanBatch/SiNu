@@ -111,10 +111,10 @@ class _NutritionPageState extends State<NutritionPage> {
   InputDecoration _fieldDecoration(String label, {Widget? prefixIcon, String? suffixText}) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+      labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
       prefixIcon: prefixIcon,
       suffixText: suffixText,
-      suffixStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      suffixStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(vertical: 9),
       border: InputBorder.none,
@@ -141,7 +141,7 @@ class _NutritionPageState extends State<NutritionPage> {
       child: Column(
         children: [
           for (var i = 0; i < fields.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: AppColors.border),
+            if (i > 0) Divider(height: 1, color: AppColors.border),
             fields[i],
           ],
         ],
@@ -287,15 +287,15 @@ class _MacroLegendRow extends StatelessWidget {
       children: [
         Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 10),
-        Expanded(child: Text(label, style: const TextStyle(fontSize: 13, color: Colors.white))),
-        Text('${grams.round()}g', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: AppColors.textPrimary))),
+        Text('${grams.round()}g', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         const SizedBox(width: 8),
         SizedBox(
           width: 70,
           child: Text(
             '${kcal.round()} kcal',
             textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
         ),
       ],
@@ -345,7 +345,7 @@ class MacroRing extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('${total.round()}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const Text('kcal/day', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+              Text('kcal/day', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
             ],
           ),
         ],
@@ -373,7 +373,7 @@ class _MacroRingPainter extends CustomPainter {
     final arcRect = rect.deflate(inset);
 
     final track = Paint()
-      ..color = Colors.white12
+      ..color = AppColors.track
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
     canvas.drawArc(arcRect, 0, 2 * math.pi, false, track);
@@ -519,7 +519,7 @@ class _RecommendationSheetState extends State<_RecommendationSheet> {
                 validator: _requiredSteps,
               ),
               const SizedBox(height: 16),
-              const Text('Goal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text('Goal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 4),
               RadioGroup<FitnessGoal>(
                 groupValue: _goal,
@@ -532,7 +532,7 @@ class _RecommendationSheetState extends State<_RecommendationSheet> {
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                           title: Text(g.label, style: const TextStyle(fontSize: 14)),
-                          subtitle: Text(g.description, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                          subtitle: Text(g.description, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                         ),
                       )
                       .toList(),

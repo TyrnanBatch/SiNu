@@ -174,7 +174,7 @@ class _BarcodeScanPageState extends State<BarcodeScanPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(_error!, style: const TextStyle(color: Colors.white)),
+                    Text(_error!, style: TextStyle(color: AppColors.textPrimary)),
                     const SizedBox(height: 12),
                     FilledButton(onPressed: _retry, child: const Text('Try Again')),
                   ],

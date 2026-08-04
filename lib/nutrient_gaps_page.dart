@@ -103,7 +103,7 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
       child: Column(
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: AppColors.border),
+            if (i > 0) Divider(height: 1, color: AppColors.border),
             children[i],
           ],
         ],
@@ -151,14 +151,14 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
                 Center(
                   child: Text(
                     'Based on $_daysWithData logged day${_daysWithData == 1 ? '' : 's'} of the last $_periodDays',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                   ),
                 ),
                 const SizedBox(height: 20),
                 if (_daysWithData == 0)
-                  const Center(
+                  Center(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 40),
+                      padding: const EdgeInsets.only(top: 40),
                       child: Text('Log some meals to see nutrient gaps', style: TextStyle(color: AppColors.textMuted)),
                     ),
                   )
@@ -175,8 +175,8 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
                   ],
                   if (notTracked.isNotEmpty) ...[
                     _sectionLabel(Icons.help_outline, 'NOT TRACKED', AppColors.textMuted),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 10, left: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10, left: 4),
                       child: Text(
                         'None of your logged foods have data for these — fill them in on the food editor to see gaps here.',
                         style: TextStyle(fontSize: 12, color: AppColors.textMuted),
@@ -190,7 +190,7 @@ class _NutrientGapsPageState extends State<NutrientGapsPage> {
                           Chip(
                             label: Text(def.label, style: const TextStyle(fontSize: 11)),
                             backgroundColor: AppColors.card,
-                            side: const BorderSide(color: AppColors.border),
+                            side: BorderSide(color: AppColors.border),
                           ),
                       ],
                     ),
@@ -227,7 +227,7 @@ class _NutrientGapRow extends StatelessWidget {
               Expanded(child: Text(def.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
               Text(
                 '${_fmt(avg)}/${_fmt(def.rdi!)} ${def.unit}',
-                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
               ),
               const SizedBox(width: 8),
               SizedBox(
@@ -246,7 +246,7 @@ class _NutrientGapRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: (pct / 100).clamp(0, 1),
               minHeight: 6,
-              backgroundColor: Colors.white12,
+              backgroundColor: AppColors.track,
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
