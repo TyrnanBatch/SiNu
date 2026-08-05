@@ -66,6 +66,7 @@ class _BarcodeScanPageState extends State<BarcodeScanPage> {
         fatG: product.fatG,
         kcal: product.kcal,
         barcode: code,
+        nutrients: product.nutrients,
       );
       if (!mounted) return;
       Navigator.pop(context, food);
@@ -119,6 +120,7 @@ class _BarcodeScanPageState extends State<BarcodeScanPage> {
         fatG: product.fatG,
         kcal: product.kcal,
         barcode: code,
+        nutrients: product.nutrients,
       );
     }
     return null;

@@ -185,6 +185,7 @@ class _AddFoodPageState extends State<AddFoodPage> with SingleTickerProviderStat
         originalCarbsG: result.carbsG,
         originalFatG: result.fatG,
         originalKcal: result.kcal,
+        nutrients: result.nutrients,
       );
       if (!mounted) return;
       setState(() => _foods.add(food!));
